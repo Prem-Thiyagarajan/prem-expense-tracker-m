@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Animated, Pressable, PressableProps, StyleProp, View, ViewStyle } from 'react-native';
+import { Animated, Pressable, PressableProps, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { useTheme } from '@/theme';
 
@@ -14,6 +14,44 @@ type BaseProps = {
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
 };
+
+// Layout props belong on the OUTER wrapper (so margins/positioning don't inflate
+// the wrapper and stretch the hard-shadow layer). Everything else styles the panel.
+const OUTER_KEYS = new Set<string>([
+  'margin',
+  'marginTop',
+  'marginBottom',
+  'marginLeft',
+  'marginRight',
+  'marginHorizontal',
+  'marginVertical',
+  'marginStart',
+  'marginEnd',
+  'alignSelf',
+  'flex',
+  'flexGrow',
+  'flexShrink',
+  'flexBasis',
+  'width',
+  'minWidth',
+  'maxWidth',
+  'position',
+  'top',
+  'left',
+  'right',
+  'bottom',
+  'zIndex',
+]);
+
+function splitStyle(style: StyleProp<ViewStyle>): { outer: ViewStyle; panel: ViewStyle } {
+  const flat = (StyleSheet.flatten(style) ?? {}) as Record<string, unknown>;
+  const outer: Record<string, unknown> = {};
+  const panel: Record<string, unknown> = {};
+  for (const key of Object.keys(flat)) {
+    (OUTER_KEYS.has(key) ? outer : panel)[key] = flat[key];
+  }
+  return { outer: outer as ViewStyle, panel: panel as ViewStyle };
+}
 
 /**
  * The core "Pocket" primitive: an opaque panel with a 2px border and a hard
@@ -33,6 +71,7 @@ export function Surface({
   const t = useTheme();
   const o = offset ?? t.shadowOffset.card;
   const br = radius ?? t.radius.card;
+  const { outer, panel: panelOverrides } = splitStyle(style);
 
   const panel: ViewStyle = {
     backgroundColor: backgroundColor ?? t.colors.card,
@@ -42,7 +81,7 @@ export function Surface({
   };
 
   return (
-    <View style={{ position: 'relative' }}>
+    <View style={[{ position: 'relative' }, outer]}>
       {o > 0 && (
         <View
           pointerEvents="none"
@@ -58,7 +97,7 @@ export function Surface({
           }}
         />
       )}
-      <View style={[panel, style]}>{children}</View>
+      <View style={[panel, panelOverrides]}>{children}</View>
     </View>
   );
 }
@@ -90,6 +129,7 @@ export function PressableSurface({
   const o = offset ?? t.shadowOffset.card;
   const br = radius ?? t.radius.card;
   const travel = useRef(new Animated.Value(0)).current;
+  const { outer, panel: panelOverrides } = splitStyle(style);
 
   const animate = (to: number) =>
     Animated.timing(travel, {
@@ -115,6 +155,7 @@ export function PressableSurface({
         animate(0);
         pressable.onPressOut?.(e);
       }}
+      style={outer}
       {...pressable}
     >
       <View style={{ position: 'relative' }}>
@@ -134,7 +175,7 @@ export function PressableSurface({
           />
         )}
         <Animated.View
-          style={[panel, { transform: [{ translateX: travel }, { translateY: travel }] }, style]}
+          style={[panel, { transform: [{ translateX: travel }, { translateY: travel }] }, panelOverrides]}
         >
           {children}
         </Animated.View>
