@@ -20,7 +20,7 @@ export function Screen({ children, scroll = true, tabBarInset = true, contentSty
   const padding: ViewStyle = {
     paddingTop: insets.top + t.spacing.sm,
     paddingHorizontal: t.spacing.lg,
-    paddingBottom: (tabBarInset ? 108 : t.spacing.lg) + insets.bottom,
+    paddingBottom: (tabBarInset ? 120 : t.spacing.lg) + insets.bottom,
   };
 
   if (!scroll) {
