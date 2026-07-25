@@ -27,3 +27,21 @@ export function formatMonthLabel(month: string): string {
   const [y, m] = month.split('-').map(Number);
   return `${MONTHS[m - 1]} '${String(y).slice(2)}`;
 }
+
+/**
+ * Inclusive `start`/`end` date bounds (`YYYY-MM-DD`) for a `YYYY-MM` month —
+ * used as the `start_date`/`end_date` params on GET /transactions.
+ *
+ * The list API filters `txn_date >= start_date AND txn_date <= end_date`, where
+ * a bare date coerces to that day's midnight. Existing data (bank imports and
+ * the web app's manual adds) stores `txn_date` at midnight, so an inclusive
+ * `[first-of-month … last-of-month]` window captures exactly the month — and
+ * matches the dashboard's half-open `[month_start, next_month_start)`. The Add
+ * flow keeps this invariant by writing manual `txn_date`s at midnight too.
+ */
+export function monthRange(month: string): { start: string; end: string } {
+  const [y, m] = month.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate(); // day 0 of next month = last day of this
+  const mm = String(m).padStart(2, '0');
+  return { start: `${month}-01`, end: `${y}-${mm}-${String(lastDay).padStart(2, '0')}` };
+}
