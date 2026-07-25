@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
+import { ForgotPasswordSheet } from '@/components/ForgotPasswordSheet';
 import { AppText, Button, Screen, TextField, useToast } from '@/components/ui';
 import { Surface } from '@/components/ui/Surface';
 import { useTheme } from '@/theme';
@@ -22,6 +23,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [forgotVisible, setForgotVisible] = useState(false);
 
   const onSubmit = async () => {
     if (!identifier.trim() || !password) {
@@ -105,7 +107,7 @@ export default function LoginScreen() {
             <AppText variant="bodyMedium">Remember me (7 days)</AppText>
           </Pressable>
 
-          <Pressable onPress={() => toast.show('Forgot Password arrives with the Settings screen')} hitSlop={6}>
+          <Pressable onPress={() => setForgotVisible(true)} hitSlop={6}>
             <AppText variant="link">Forgot?</AppText>
           </Pressable>
         </View>
@@ -121,6 +123,16 @@ export default function LoginScreen() {
           </Pressable>
         </View>
       </View>
+
+      <ForgotPasswordSheet
+        visible={forgotVisible}
+        onClose={() => setForgotVisible(false)}
+        initialIdentifier={identifier}
+        onResetSuccess={(id) => {
+          setIdentifier(id);
+          toast.show('Password reset ✓ — log in');
+        }}
+      />
     </Screen>
   );
 }

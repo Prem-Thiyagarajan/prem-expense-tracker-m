@@ -26,3 +26,19 @@ export async function getMe(): Promise<AuthUser> {
 export async function logoutRequest(): Promise<void> {
   await clearToken();
 }
+
+export type RecoveryResetInput = { identifier: string; answer: string; new_password: string };
+
+/**
+ * POST /auth/recovery/question — the security question for an account.
+ * 404 if the account has no security question set.
+ */
+export async function getRecoveryQuestion(identifier: string): Promise<string> {
+  const { data } = await api.post<{ question: string }>('/auth/recovery/question', { identifier });
+  return data.question;
+}
+
+/** POST /auth/recovery/reset — set a new password after verifying the security answer. */
+export async function resetPasswordWithAnswer(input: RecoveryResetInput): Promise<void> {
+  await api.post('/auth/recovery/reset', input);
+}
