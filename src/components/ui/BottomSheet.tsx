@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react';
 import {
   Animated,
   Easing,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   View,
   ViewStyle,
@@ -50,7 +52,10 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1, justifyContent: 'flex-end' }}
+      >
         <Animated.View
           style={{
             ...StyleSheetAbsolute,
@@ -90,7 +95,7 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
           </View>
           {children}
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
