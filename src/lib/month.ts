@@ -27,3 +27,23 @@ export function formatMonthLabel(month: string): string {
   const [y, m] = month.split('-').map(Number);
   return `${MONTHS[m - 1]} '${String(y).slice(2)}`;
 }
+
+/** Number of days in a `YYYY-MM` month. */
+export function daysInMonth(month: string): number {
+  const [y, m] = month.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
+/**
+ * How far into `month` "today" is: `elapsed` = today's day-of-month (capped at
+ * the month length for past/future months), `total` = days in the month.
+ * For a past month, `elapsed === total` (fully elapsed); for a future month,
+ * `elapsed === 0` — the app never lets you page there, but this stays safe.
+ */
+export function monthProgress(month: string): { elapsed: number; total: number } {
+  const total = daysInMonth(month);
+  const today = currentMonth();
+  if (month < today) return { elapsed: total, total };
+  if (month > today) return { elapsed: 0, total };
+  return { elapsed: new Date().getDate(), total };
+}

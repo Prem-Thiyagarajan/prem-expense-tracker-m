@@ -6,7 +6,7 @@ import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 
 import { AppText } from '@/components/ui';
 import type { TrendPoint } from '@/api/dashboard';
-import { formatINR } from '@/lib/format';
+import { formatINR, formatINRCompact } from '@/lib/format';
 import type { Theme } from '@/theme';
 import { useChartWidth } from './useChartWidth';
 
@@ -16,13 +16,6 @@ const X_AXIS_H = 18; // bottom gutter for day-of-month labels
 const PLOT_L = 38; // left gutter for ₹k labels
 const PLOT_R = 6; // small right breathing room
 const X_TICKS = 5; // target number of day labels across the axis
-
-/** Compact ₹k axis label: 0 → "₹0", 11000 → "₹11k", 21744 → "₹22k". */
-function kLabel(v: number): string {
-  if (v < 1000) return `₹${Math.round(v)}`;
-  const k = v / 1000;
-  return `₹${k >= 10 ? Math.round(k) : Number(k.toFixed(1))}k`;
-}
 
 /**
  * Interactive cumulative-spend line for the month. Scrub a finger across the
@@ -160,7 +153,7 @@ function TrendSvg({
           fill={t.colors.muted}
           textAnchor="end"
         >
-          {kLabel(maxVal * (1 - g))}
+          {formatINRCompact(maxVal * (1 - g))}
         </SvgText>
       ))}
 

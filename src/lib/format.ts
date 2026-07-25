@@ -19,3 +19,10 @@ export function formatShortDate(iso: string): string {
   if (Number.isNaN(d.getTime())) return '';
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
+
+/** Compact ₹k axis label: 0 → "₹0", 11000 → "₹11k", 21744 → "₹22k". */
+export function formatINRCompact(v: number): string {
+  if (v < 1000) return `₹${Math.round(v)}`;
+  const k = v / 1000;
+  return `₹${k >= 10 ? Math.round(k) : Number(k.toFixed(1))}k`;
+}

@@ -31,7 +31,10 @@ export function TextField({ label, error, password, style, ...rest }: Props) {
           paddingHorizontal: t.spacing.md,
         }}
       >
+        {/* `rest` is spread first so our handlers below compose with a caller's
+            onFocus/onBlur rather than being overwritten by them. */}
         <TextInput
+          {...rest}
           style={[
             {
               flex: 1,
@@ -44,7 +47,7 @@ export function TextField({ label, error, password, style, ...rest }: Props) {
           ]}
           placeholderTextColor={t.colors.faint}
           secureTextEntry={password ? hidden : false}
-          autoCapitalize="none"
+          autoCapitalize={rest.autoCapitalize ?? 'none'}
           onFocus={(e) => {
             setFocused(true);
             rest.onFocus?.(e);
@@ -53,7 +56,6 @@ export function TextField({ label, error, password, style, ...rest }: Props) {
             setFocused(false);
             rest.onBlur?.(e);
           }}
-          {...rest}
         />
         {password ? (
           <Pressable onPress={() => setHidden((h) => !h)} hitSlop={8} style={{ paddingLeft: 8 }}>
