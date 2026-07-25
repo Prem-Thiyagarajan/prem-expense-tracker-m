@@ -11,7 +11,8 @@ import {
 
 /**
  * The user's categories — a slow-changing lookup shared across Expenses, Add,
- * and Budget. Long stale time; rows are joined to transactions client-side.
+ * and Budget. Cached 10m (CONVENTIONS §7); rows are joined to transactions
+ * client-side.
  */
 export function useCategories() {
   return useQuery({

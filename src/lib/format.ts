@@ -13,6 +13,13 @@ export function formatINR(amount: number, decimals = false): string {
   return `${neg ? '-' : ''}₹${decPart ? `${grouped}.${decPart}` : grouped}`;
 }
 
+/** Compact ₹k axis label: 0 → "₹0", 11000 → "₹11k", 21744 → "₹22k". */
+export function formatINRCompact(v: number): string {
+  if (v < 1000) return `₹${Math.round(v)}`;
+  const k = v / 1000;
+  return `₹${k >= 10 ? Math.round(k) : Number(k.toFixed(1))}k`;
+}
+
 /** Short day label from an ISO date/datetime string, e.g. "12 Jul". */
 export function formatShortDate(iso: string): string {
   const d = new Date(iso);

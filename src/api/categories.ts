@@ -1,6 +1,6 @@
 import { api } from './client';
 
-/** A spending category — matches backend CategoryOut. */
+/** Response shape of GET /categories (see backend category_schema.py CategoryOut). */
 export type Category = {
   id: number;
   name: string;
@@ -12,7 +12,7 @@ export type Category = {
 export type CategoryCreate = { name: string; is_income: boolean; icon_name?: string | null };
 export type CategoryUpdate = Partial<CategoryCreate>;
 
-/** GET /categories — all of the user's categories. */
+/** GET /categories — every category owned by the current user. */
 export async function getCategories(): Promise<Category[]> {
   const { data } = await api.get<Category[]>('/categories');
   return data;

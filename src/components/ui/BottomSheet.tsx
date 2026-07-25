@@ -13,88 +13,110 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/theme';
 
+/** Travel distance before the sheet's real height is measured. */
+const FALLBACK_H = 800;
+/** Drag past this (or flick faster than VELOCITY_CLOSE) to dismiss. */
+const CLOSE_DISTANCE = 110;
+const VELOCITY_CLOSE = 800;
+
 type Props = {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  /** Optional fixed height; otherwise the sheet hugs its content. */
+  /** Optional fixed/max height; otherwise the sheet hugs its content. */
   style?: ViewStyle;
 };
 
-// Release thresholds for the pull-down-to-dismiss gesture.
-const CLOSE_DISTANCE = 120; // px dragged
-const CLOSE_VELOCITY = 800; // px/s flick
-const HIDDEN = 900; // fallback offscreen distance before the sheet has measured
-
 /**
- * Bottom sheet: cream bg, 2px top border, 28 top radius, drag grabber, sliding
- * up over a 45% ink scrim. Tap the scrim or pull the sheet down by its grabber
- * to close.
+ * Bottom sheet: cream bg, 2px top border, 28 top radius, sliding up over a 45%
+ * ink scrim. Dismissed by dragging the grabber down, tapping the scrim, or the
+ * hardware back button — so sheets don't need their own close button.
+ *
+ * The drag lives on the grabber rather than the whole panel, so sheets
+ * containing a scrollable list still scroll normally.
  */
 export function BottomSheet({ visible, onClose, children, style }: Props) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const y = useSharedValue(HIDDEN); // sheet translateY: 0 = shown
+
+  const translateY = useSharedValue(FALLBACK_H);
   const scrim = useSharedValue(0);
-  const height = useSharedValue(HIDDEN); // measured sheet height = fully-hidden offset
+  const sheetH = useSharedValue(FALLBACK_H);
 
   useEffect(() => {
     if (visible) {
-      y.value = withTiming(0, { duration: 260, easing: Easing.out(Easing.cubic) });
+      translateY.value = withTiming(0, { duration: 260, easing: Easing.out(Easing.cubic) });
       scrim.value = withTiming(1, { duration: 260 });
     } else {
-      y.value = height.value;
+      // Reset instantly while hidden so the next open animates from off-screen.
+      translateY.value = sheetH.value;
       scrim.value = 0;
     }
-  }, [visible, y, scrim, height]);
+  }, [visible, translateY, scrim, sheetH]);
 
-  // Animate the sheet down and out, then notify the parent to unmount it.
-  // Called from JS (scrim tap / back button); shared-value writes from the JS
-  // thread are scheduled on the UI thread by Reanimated.
+  /**
+   * Animate the sheet down and out, then notify the parent to unmount it.
+   * Called from JS (scrim tap / hardware back); shared-value writes from the JS
+   * thread are scheduled on the UI thread by Reanimated.
+   */
   const dismiss = useCallback(() => {
     scrim.value = withTiming(0, { duration: 200 });
-    y.value = withTiming(
-      height.value,
+    translateY.value = withTiming(
+      sheetH.value,
       { duration: 200, easing: Easing.in(Easing.cubic) },
       (finished) => {
         if (finished) runOnJS(onClose)();
       },
     );
-  }, [y, scrim, height, onClose]);
+  }, [translateY, scrim, sheetH, onClose]);
 
-  const pan = Gesture.Pan()
+  const close = useCallback(() => onClose(), [onClose]);
+
+  const dragToDismiss = Gesture.Pan()
     .onUpdate((e) => {
-      y.value = Math.max(0, e.translationY);
+      // Downward only — dragging up shouldn't lift the sheet off its edge.
+      const dy = Math.max(0, e.translationY);
+      translateY.value = dy;
+      scrim.value = 1 - Math.min(1, dy / sheetH.value);
     })
     .onEnd((e) => {
-      if (e.translationY > CLOSE_DISTANCE || e.velocityY > CLOSE_VELOCITY) {
-        // Run the close animation on the UI thread for a smooth drag-off.
+      if (e.translationY > CLOSE_DISTANCE || e.velocityY > VELOCITY_CLOSE) {
+        // Finish the close animation on the UI thread for a smooth drag-off.
         scrim.value = withTiming(0, { duration: 200 });
-        y.value = withTiming(
-          height.value,
-          { duration: 200, easing: Easing.in(Easing.cubic) },
-          (finished) => {
-            if (finished) runOnJS(onClose)();
-          },
-        );
+        translateY.value = withTiming(sheetH.value, { duration: 200 }, (finished) => {
+          if (finished) runOnJS(close)();
+        });
       } else {
-        y.value = withSpring(0, { damping: 18, stiffness: 220 });
+        translateY.value = withSpring(0, { damping: 20, stiffness: 220 });
+        scrim.value = withTiming(1, { duration: 160 });
       }
     });
 
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
   const scrimStyle = useAnimatedStyle(() => ({ opacity: scrim.value }));
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={dismiss}>
+      {/* Gestures inside an RN Modal need their own root on Android. */}
       <GestureHandlerRootView style={{ flex: 1 }}>
+        {/* iOS needs padding to lift the sheet; Android already resizes the
+            window (softwareKeyboardLayoutMode defaults to "resize"), so adding
+            our own compensation there double-counts and pushes the sheet's top
+            off-screen. */}
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1, justifyContent: 'flex-end' }}
         >
           <Animated.View
             style={[
-              { ...StyleSheetAbsolute, backgroundColor: t.colors.scrim },
+              {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: t.colors.scrim,
+              },
               scrimStyle,
             ]}
           >
@@ -103,7 +125,7 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
 
           <Animated.View
             onLayout={(e) => {
-              height.value = e.nativeEvent.layout.height;
+              sheetH.value = e.nativeEvent.layout.height;
             }}
             style={[
               {
@@ -114,14 +136,23 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
                 borderTopRightRadius: t.radius.sheet,
                 paddingBottom: insets.bottom + t.spacing.lg,
                 paddingHorizontal: t.spacing.lg,
+                // Lets the panel give way when the keyboard shrinks the
+                // available height, instead of overflowing off the top.
+                flexShrink: 1,
               },
               style,
               sheetStyle,
             ]}
           >
-            {/* Drag grabber — pull down to dismiss. */}
-            <GestureDetector gesture={pan}>
-              <View style={{ alignItems: 'center', paddingTop: t.spacing.md, paddingBottom: t.spacing.md }}>
+            {/* Drag handle: 44×5 grabber in a tall, full-width grab area. */}
+            <GestureDetector gesture={dragToDismiss}>
+              <View
+                style={{
+                  alignItems: 'center',
+                  paddingTop: t.spacing.md,
+                  paddingBottom: t.spacing.md,
+                }}
+              >
                 <View
                   style={{
                     width: 44,
@@ -140,11 +171,3 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
     </Modal>
   );
 }
-
-const StyleSheetAbsolute = {
-  position: 'absolute' as const,
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-};
