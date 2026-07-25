@@ -54,6 +54,22 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
     }
   }, [visible, translateY, scrim, sheetH]);
 
+  /**
+   * Animate the sheet down and out, then notify the parent to unmount it.
+   * Called from JS (scrim tap / hardware back); shared-value writes from the JS
+   * thread are scheduled on the UI thread by Reanimated.
+   */
+  const dismiss = useCallback(() => {
+    scrim.value = withTiming(0, { duration: 200 });
+    translateY.value = withTiming(
+      sheetH.value,
+      { duration: 200, easing: Easing.in(Easing.cubic) },
+      (finished) => {
+        if (finished) runOnJS(onClose)();
+      },
+    );
+  }, [translateY, scrim, sheetH, onClose]);
+
   const close = useCallback(() => onClose(), [onClose]);
 
   const dragToDismiss = Gesture.Pan()
@@ -65,6 +81,7 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
     })
     .onEnd((e) => {
       if (e.translationY > CLOSE_DISTANCE || e.velocityY > VELOCITY_CLOSE) {
+        // Finish the close animation on the UI thread for a smooth drag-off.
         scrim.value = withTiming(0, { duration: 200 });
         translateY.value = withTiming(sheetH.value, { duration: 200 }, (finished) => {
           if (finished) runOnJS(close)();
@@ -79,7 +96,7 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
   const scrimStyle = useAnimatedStyle(() => ({ opacity: scrim.value }));
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={dismiss}>
       {/* Gestures inside an RN Modal need their own root on Android. */}
       <GestureHandlerRootView style={{ flex: 1 }}>
         {/* iOS needs padding to lift the sheet; Android already resizes the
@@ -92,11 +109,18 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
         >
           <Animated.View
             style={[
-              { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: t.colors.scrim },
+              {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: t.colors.scrim,
+              },
               scrimStyle,
             ]}
           >
-            <Pressable style={{ flex: 1 }} onPress={onClose} />
+            <Pressable style={{ flex: 1 }} onPress={dismiss} />
           </Animated.View>
 
           <Animated.View
@@ -122,7 +146,13 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
           >
             {/* Drag handle: 44×5 grabber in a tall, full-width grab area. */}
             <GestureDetector gesture={dragToDismiss}>
-              <View style={{ alignItems: 'center', paddingTop: t.spacing.md, paddingBottom: t.spacing.md }}>
+              <View
+                style={{
+                  alignItems: 'center',
+                  paddingTop: t.spacing.md,
+                  paddingBottom: t.spacing.md,
+                }}
+              >
                 <View
                   style={{
                     width: 44,

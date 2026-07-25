@@ -5,9 +5,11 @@ import { candy } from '@/theme';
  * turning a backend category into an emoji on a candy-tinted badge.
  *
  * The backend stores a lucide `icon_name` per category (`utensils`, `leaf`, …);
- * we never render lucide on mobile, so each name maps to one emoji + one candy
- * color here. Resolves in three steps: exact `icon_name` → keyword match on the
- * category name → neutral fallback.
+ * the web app renders those via a 36-icon registry (frontend
+ * `utils/iconHelper.tsx`), but we never render lucide on mobile, so each name
+ * maps to one emoji + one candy color here — keeping the sticker aesthetic
+ * without pulling in an icon font. Resolves in three steps: exact `icon_name` →
+ * keyword match on the category name → neutral fallback.
  *
  * Adding an icon: add one row to BY_ICON keyed by the lucide name. This is the
  * only place a category-to-emoji mapping may live — never map one inline.
@@ -77,6 +79,15 @@ const BY_KEYWORD: [string, string][] = [
 ];
 
 const FALLBACK: CategoryVisual = { emoji: '🏷️', color: NEUTRAL };
+
+/**
+ * The icon options offered in the category editor. Each stores the backend's
+ * lucide `icon_name` (so the web app renders the same glyph) but is presented as
+ * its emoji + candy tint here. Order follows BY_ICON's declaration order.
+ */
+export const ICON_CHOICES: { icon: string; emoji: string; color: string }[] = Object.entries(
+  BY_ICON,
+).map(([icon, v]) => ({ icon, emoji: v.emoji, color: v.color }));
 
 /** Resolve a category's badge emoji + candy fill. */
 export function categoryVisual(iconName?: string | null, name?: string | null): CategoryVisual {

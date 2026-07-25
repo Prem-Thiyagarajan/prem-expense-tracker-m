@@ -43,6 +43,9 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="manage/categories" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="manage/accounts" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="manage/tags" options={{ animation: 'slide_from_right' }} />
     </Stack>
   );
 }

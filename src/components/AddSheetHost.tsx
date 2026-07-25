@@ -1,36 +1,45 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { View } from 'react-native';
 
-import { useTheme } from '@/theme';
-import { AppText } from './ui/AppText';
+import type { Transaction } from '@/api/transactions';
+import { AddTransactionForm } from './AddTransactionForm';
 import { BottomSheet } from './ui/BottomSheet';
 
-type AddSheetContextValue = { openAdd: () => void; closeAdd: () => void };
+type AddSheetContextValue = {
+  /** Open the sheet to create a new transaction. */
+  openAdd: () => void;
+  /** Open the sheet to edit an existing transaction (used by swipe → Edit). */
+  openEdit: (txn: Transaction) => void;
+  closeAdd: () => void;
+};
 const AddSheetContext = createContext<AddSheetContextValue | null>(null);
 
 /**
- * Hosts the global "Add transaction" sheet, opened by the center FAB from any
- * screen. Placeholder content for now — the full Add flow arrives in Milestone 3.
+ * Hosts the global Add / Edit transaction sheet, opened by the center FAB (add)
+ * from any screen or by a swipe action (edit). The form is only mounted while
+ * the sheet is visible, so each open starts from a clean draft (or the edited
+ * transaction's values).
  */
 export function AddSheetHost({ children }: { children: React.ReactNode }) {
-  const t = useTheme();
   const [visible, setVisible] = useState(false);
+  const [editing, setEditing] = useState<Transaction | null>(null);
 
-  const openAdd = useCallback(() => setVisible(true), []);
+  const openAdd = useCallback(() => {
+    setEditing(null);
+    setVisible(true);
+  }, []);
+  const openEdit = useCallback((txn: Transaction) => {
+    setEditing(txn);
+    setVisible(true);
+  }, []);
   const closeAdd = useCallback(() => setVisible(false), []);
-  const value = useMemo(() => ({ openAdd, closeAdd }), [openAdd, closeAdd]);
+
+  const value = useMemo(() => ({ openAdd, openEdit, closeAdd }), [openAdd, openEdit, closeAdd]);
 
   return (
     <AddSheetContext.Provider value={value}>
       {children}
       <BottomSheet visible={visible} onClose={closeAdd}>
-        <View style={{ paddingVertical: t.spacing.xl, alignItems: 'center', gap: t.spacing.sm }}>
-          <AppText variant="title">Add transaction</AppText>
-          <AppText variant="body" tone="muted" style={{ textAlign: 'center' }}>
-            The full Add flow (amount keypad, category chips, smart-category hint)
-            arrives in Milestone 3.
-          </AppText>
-        </View>
+        {visible ? <AddTransactionForm editing={editing} onDone={closeAdd} /> : null}
       </BottomSheet>
     </AddSheetContext.Provider>
   );

@@ -42,3 +42,18 @@ export async function getRecoveryQuestion(identifier: string): Promise<string> {
 export async function resetPasswordWithAnswer(input: RecoveryResetInput): Promise<void> {
   await api.post('/auth/recovery/reset', input);
 }
+
+export type ChangePasswordInput = { old_password: string; new_password: string };
+
+/** POST /auth/change-password — change the signed-in user's password. */
+export async function changePassword(input: ChangePasswordInput): Promise<void> {
+  await api.post('/auth/change-password', input);
+}
+
+/**
+ * DELETE /users/me — permanently delete the signed-in account. The current
+ * password is re-verified server-side, so it travels in the request body.
+ */
+export async function deleteMyAccount(password: string): Promise<void> {
+  await api.delete('/users/me', { data: { password } });
+}
