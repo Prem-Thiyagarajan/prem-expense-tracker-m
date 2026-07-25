@@ -12,17 +12,23 @@ type MonthContextValue = {
   label: string; // "Jul '26"
   goPrev: () => void;
   goNext: () => void;
+  /** Jump directly to any `YYYY-MM` (clamped so we never land in the future). */
+  setMonth: (month: string) => void;
   canGoNext: boolean; // false at the current month — we never page into the future
 };
 
 const MonthContext = createContext<MonthContextValue | null>(null);
 
 export function MonthProvider({ children }: { children: React.ReactNode }) {
-  const [month, setMonth] = useState(currentMonth);
+  const [month, setMonthState] = useState(currentMonth);
 
-  const goPrev = useCallback(() => setMonth((m) => shiftMonth(m, -1)), []);
+  const goPrev = useCallback(() => setMonthState((m) => shiftMonth(m, -1)), []);
   const goNext = useCallback(
-    () => setMonth((m) => (shiftMonth(m, 1) <= currentMonth() ? shiftMonth(m, 1) : m)),
+    () => setMonthState((m) => (shiftMonth(m, 1) <= currentMonth() ? shiftMonth(m, 1) : m)),
+    [],
+  );
+  const setMonth = useCallback(
+    (next: string) => setMonthState(next <= currentMonth() ? next : currentMonth()),
     [],
   );
 
@@ -32,9 +38,10 @@ export function MonthProvider({ children }: { children: React.ReactNode }) {
       label: formatMonthLabel(month),
       goPrev,
       goNext,
+      setMonth,
       canGoNext: month < currentMonth(),
     }),
-    [month, goPrev, goNext],
+    [month, goPrev, goNext, setMonth],
   );
 
   return <MonthContext.Provider value={value}>{children}</MonthContext.Provider>;

@@ -114,3 +114,15 @@ export function ChevronRightIcon({ size = 24, color = '#000', strokeWidth = 2 }:
     </Svg>
   );
 }
+
+/** Calendar with a top binding — used by date pickers. */
+export function CalendarIcon({ size = 24, color = '#000', strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg {...base(size)} fill="none">
+      <Rect x={3} y={5} width={18} height={16} rx={2.5} stroke={color} strokeWidth={strokeWidth} />
+      <Line x1={3} y1={9.5} x2={21} y2={9.5} stroke={color} strokeWidth={strokeWidth} />
+      <Line x1={8} y1={3} x2={8} y2={6.5} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Line x1={16} y1={3} x2={16} y2={6.5} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
