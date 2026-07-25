@@ -72,6 +72,15 @@ const KEYWORD_TO_ICON: [string, string][] = [
   ['transport', 'bus'],
 ];
 
+/**
+ * The icon options offered in the category editor. Each stores the backend's
+ * lucide `icon_name` (so the web app renders the same glyph) but is presented as
+ * its emoji + candy tint here. Order follows the map's declaration order.
+ */
+export const ICON_CHOICES: { icon: string; emoji: string; color: string }[] = Object.entries(
+  BY_ICON,
+).map(([icon, v]) => ({ icon, emoji: v.emoji, color: v.color }));
+
 /** Emoji + candy color for a category, from its icon name (preferred) or name. */
 export function categoryVisual(
   iconName?: string | null,
