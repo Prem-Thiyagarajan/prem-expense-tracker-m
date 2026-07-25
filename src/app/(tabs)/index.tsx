@@ -1,28 +1,35 @@
-import { View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
+import { Pressable, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
-import { ChevronLeftIcon, ChevronRightIcon } from '@/components/icons';
-import { AppText, Button, Card, Chip, Screen, useToast } from '@/components/ui';
+import { CategoryDonut, SpendTrend } from '@/components/charts';
+import { MonthSwitcher } from '@/components/MonthSwitcher';
+import { AppText, Button, Card, Screen } from '@/components/ui';
 import { Surface } from '@/components/ui/Surface';
-import { useTheme, useThemeControls } from '@/theme';
+import { useDashboard } from '@/hooks/useDashboard';
+import type { RecentTransaction } from '@/api/dashboard';
+import { formatINR, formatShortDate } from '@/lib/format';
+import { useMonth } from '@/state/MonthProvider';
+import { useTheme, type Theme } from '@/theme';
 
 export default function HomeScreen() {
   const t = useTheme();
-  const toast = useToast();
-  const { toggle } = useThemeControls();
-  const { user, signOut } = useAuth();
-  const isDark = t.mode === 'dark';
+  const router = useRouter();
+  const { user } = useAuth();
+  const { month, label } = useMonth();
+  const { data, isLoading, isError, refetch, isRefetching } = useDashboard(month);
+
   const initial = user?.username?.[0]?.toUpperCase() ?? '?';
+  // A month is "empty" when it has no spending. We key off totalSpent alone
+  // because the backend's recentTransactions list is global-latest (not
+  // month-scoped), so it's non-empty even for months with zero activity.
+  const isEmpty = !!data && data.totalSpent === 0;
 
   return (
     <Screen>
-      {/* Vertical rhythm via a single gap container — no per-card margins (which
-          would inflate the hard-shadow layer). */}
       <View style={{ gap: t.spacing.lg }}>
-        {/* Header: logo tile · month control · avatar */}
-        <View
-          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-        >
+        {/* Header: logo tile · month control · avatar → profile */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Surface
             backgroundColor={t.candy.yellow}
             offset={t.shadowOffset.chip}
@@ -38,99 +45,205 @@ export default function HomeScreen() {
             <AppText style={{ fontSize: 20 }}>💸</AppText>
           </Surface>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
-            <ChevronLeftIcon size={20} color={t.colors.ink} />
-            <AppText variant="heading">Jul '26</AppText>
-            <ChevronRightIcon size={20} color={t.colors.ink} />
-          </View>
+          <MonthSwitcher />
 
-          <Surface
-            backgroundColor={t.candy.pink}
-            offset={t.shadowOffset.chip}
-            radius={999}
-            style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <AppText variant="heading" color={t.candyText}>
-              {initial}
-            </AppText>
-          </Surface>
-        </View>
-
-        {/* Guilt-free hero */}
-        <Card background={t.candy.mint}>
-          <View
-            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-          >
-            <AppText variant="label" color={t.candyText}>
-              Guilt-free today
-            </AppText>
+          {/* Cast: expo-router's generated route types pick up profile.tsx once
+              the dev server regenerates them; the literal is valid at runtime. */}
+          <Pressable onPress={() => router.push('/profile' as Href)} hitSlop={6}>
             <Surface
-              backgroundColor={t.colors.card}
-              offset={0}
+              backgroundColor={t.candy.pink}
+              offset={t.shadowOffset.chip}
               radius={999}
-              borderWidth={t.border.row}
-              style={{ paddingHorizontal: 10, paddingVertical: 3 }}
+              style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
             >
-              <AppText variant="subheading" style={{ fontSize: 11 }}>
-                on pace ✓
+              <AppText variant="heading" color={t.candyText}>
+                {initial}
               </AppText>
             </Surface>
-          </View>
-          <AppText variant="money" color={t.candyText} style={{ fontSize: 46, marginTop: t.spacing.sm }}>
-            ₹412
-          </AppText>
-        </Card>
-
-        {/* KPI row */}
-        <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
-          <View style={{ flex: 1 }}>
-            <Card padded radius={t.radius.card}>
-              <AppText variant="label">Spent</AppText>
-              <AppText variant="money" style={{ fontSize: 22, marginTop: 4 }}>
-                ₹8,240
-              </AppText>
-            </Card>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Card padded radius={t.radius.card}>
-              <AppText variant="label">Daily avg</AppText>
-              <AppText variant="money" style={{ fontSize: 22, marginTop: 4 }}>
-                ₹392
-              </AppText>
-            </Card>
-          </View>
+          </Pressable>
         </View>
 
-        {/* Roast of the day */}
-        <Card background={t.candy.yellow}>
-          <AppText variant="label" color={t.candyText}>
-            Roast of the day
-          </AppText>
-          <AppText variant="bodyMedium" color={t.candyText} style={{ marginTop: 6 }}>
-            Third Zomato order this week — the kitchen misses you. 👀
-          </AppText>
-        </Card>
+        {isLoading ? (
+          <DashboardSkeleton t={t} />
+        ) : isError ? (
+          <ErrorCard t={t} onRetry={refetch} retrying={isRefetching} />
+        ) : isEmpty ? (
+          <EmptyCard t={t} label={label} />
+        ) : data ? (
+          <>
+            {/* Hero: total spent this month + change vs last month */}
+            <Card background={t.candy.mint}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <AppText variant="label" color={t.candyText}>
+                  Spent in {label}
+                </AppText>
+                <ChangePill t={t} pct={data.percentChangeFromLastMonth} />
+              </View>
+              <AppText
+                variant="money"
+                color={t.candyText}
+                style={{ fontSize: 46, marginTop: t.spacing.sm }}
+              >
+                {formatINR(data.totalSpent)}
+              </AppText>
+            </Card>
 
-        {/* Design-system status */}
-        <View style={{ flexDirection: 'row', gap: t.spacing.sm, flexWrap: 'wrap' }}>
-          <Chip label="Milestone 0" selected candyColor={t.candy.mint} />
-          <Chip label="Design system ✓" />
-          <Chip
-            label={isDark ? 'Theme: Dark' : 'Theme: Light'}
-            onPress={toggle}
-            selected
-            candyColor={t.candy.lilac}
-            left={<AppText style={{ fontSize: 13 }}>{isDark ? '🌙' : '☀️'}</AppText>}
-          />
-        </View>
+            {/* KPI row */}
+            <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
+              <KpiCard t={t} label="Daily avg" value={formatINR(data.dailyAverageSpend)} />
+              <KpiCard t={t} label="Projected" value={formatINR(data.projectedMonthlySpend)} />
+            </View>
 
-        <Button label="Show a toast" variant="primary" onPress={() => toast.show('Saved ✓  −₹412')} />
-        <Button
-          label={user ? `Sign out (${user.username})` : 'Sign out'}
-          variant="danger"
-          onPress={signOut}
-        />
+            {/* Spending trend — cumulative spend across the month (interactive) */}
+            {data.spendingTrend.length >= 2 &&
+              data.spendingTrend.some((p) => p.cumulative_spend > 0) && (
+                <Card>
+                  <SpendTrend t={t} title="Spending trend" data={data.spendingTrend} />
+                </Card>
+              )}
+
+            {/* Category split — each category's share of total spend */}
+            {data.topSpendingCategories.length > 0 && (
+              <Card>
+                <AppText variant="label">Category split</AppText>
+                <View style={{ marginTop: t.spacing.md }}>
+                  <CategoryDonut
+                    t={t}
+                    data={data.topSpendingCategories}
+                    total={data.totalSpent}
+                    centerLabel={label}
+                  />
+                </View>
+              </Card>
+            )}
+
+            {/* Recent activity — most recent 4 only */}
+            {data.recentTransactions.length > 0 && (
+              <Card>
+                <AppText variant="label">Recent activity</AppText>
+                <View style={{ marginTop: t.spacing.sm }}>
+                  {data.recentTransactions.slice(0, 4).map((txn, i, shown) => (
+                    <TxnRow key={txn.id} t={t} txn={txn} last={i === shown.length - 1} />
+                  ))}
+                </View>
+              </Card>
+            )}
+          </>
+        ) : null}
       </View>
     </Screen>
+  );
+}
+
+/** Small pill showing month-over-month change; green when spending fell. */
+function ChangePill({ t, pct }: { t: Theme; pct: number }) {
+  const flat = Math.round(pct) === 0;
+  const up = pct > 0;
+  const color = flat ? t.colors.muted : up ? t.semantic.red : t.semantic.green;
+  const text = flat ? 'no change' : `${up ? '↑' : '↓'} ${Math.abs(Math.round(pct))}% vs last mo`;
+  return (
+    <Surface
+      backgroundColor={t.colors.card}
+      offset={0}
+      radius={999}
+      borderWidth={t.border.row}
+      style={{ paddingHorizontal: 10, paddingVertical: 3 }}
+    >
+      <AppText variant="subheading" color={color} style={{ fontSize: 11 }}>
+        {text}
+      </AppText>
+    </Surface>
+  );
+}
+
+function KpiCard({ t, label, value }: { t: Theme; label: string; value: string }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <Card padded radius={t.radius.card}>
+        <AppText variant="label">{label}</AppText>
+        <AppText variant="money" style={{ fontSize: 22, marginTop: 4 }}>
+          {value}
+        </AppText>
+      </Card>
+    </View>
+  );
+}
+
+function TxnRow({ t, txn, last }: { t: Theme; txn: RecentTransaction; last: boolean }) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: t.spacing.sm,
+        borderBottomWidth: last ? 0 : t.border.row,
+        borderBottomColor: t.colors.hair,
+      }}
+    >
+      <View style={{ flexShrink: 1, paddingRight: t.spacing.sm }}>
+        <AppText variant="bodyMedium" numberOfLines={1}>
+          {txn.description || 'Transaction'}
+        </AppText>
+        <AppText variant="body" tone="muted" style={{ fontSize: 12, marginTop: 1 }}>
+          {formatShortDate(txn.txn_date)}
+        </AppText>
+      </View>
+      <AppText variant="money" style={{ fontSize: 15 }}>
+        {formatINR(txn.amount)}
+      </AppText>
+    </View>
+  );
+}
+
+function EmptyCard({ t, label }: { t: Theme; label: string }) {
+  return (
+    <Card background={t.candy.mint} style={{ alignItems: 'center', paddingVertical: t.spacing.xl }}>
+      <AppText style={{ fontSize: 34 }}>🧾</AppText>
+      <AppText variant="heading" color={t.candyText} style={{ marginTop: t.spacing.sm }}>
+        No spending yet in {label}
+      </AppText>
+      <AppText variant="bodyMedium" color={t.candyText} style={{ marginTop: 4, textAlign: 'center' }}>
+        Add a transaction with the ＋ button and it’ll show up here.
+      </AppText>
+    </Card>
+  );
+}
+
+function ErrorCard({ t, onRetry, retrying }: { t: Theme; onRetry: () => void; retrying: boolean }) {
+  return (
+    <Card background={t.candy.coral}>
+      <AppText variant="heading" color={t.candyText}>
+        Couldn’t load your dashboard
+      </AppText>
+      <AppText variant="bodyMedium" color={t.candyText} style={{ marginTop: 4 }}>
+        Check your connection and try again.
+      </AppText>
+      <View style={{ marginTop: t.spacing.md }}>
+        <Button
+          label={retrying ? 'Retrying…' : 'Retry'}
+          variant="primary"
+          onPress={onRetry}
+          disabled={retrying}
+        />
+      </View>
+    </Card>
+  );
+}
+
+/** Static, hair-colored blocks that mirror the loaded layout's rhythm. */
+function DashboardSkeleton({ t }: { t: Theme }) {
+  const Block = ({ h, r = t.radius.card, flex }: { h: number; r?: number; flex?: number }) => (
+    <View style={{ flex, height: h, borderRadius: r, backgroundColor: t.colors.hair }} />
+  );
+  return (
+    <View style={{ gap: t.spacing.lg }}>
+      <Block h={116} r={t.radius.cardLg} />
+      <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
+        <Block h={78} flex={1} />
+        <Block h={78} flex={1} />
+      </View>
+      <Block h={180} r={t.radius.cardLg} />
+    </View>
   );
 }
