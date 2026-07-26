@@ -79,7 +79,24 @@ export default function TrendsScreen() {
     () => [...(data?.categoryDistribution ?? [])].sort((a, b) => b.total - a.total),
     [data?.categoryDistribution],
   );
-  const periodTotal = useMemo(() => distribution.reduce((s, d) => s + d.total, 0), [distribution]);
+  /**
+   * The true total for the period. It comes from the heatmap, not from
+   * `categoryDistribution`, because the backend builds the distribution with an
+   * INNER JOIN onto categories — spending on transactions with no category is
+   * missing from it entirely. The heatmap has no such join, so it's the only
+   * section that always accounts for every debit, and it's what keeps this
+   * figure agreeing with the Home screen's.
+   */
+  const periodTotal = useMemo(
+    () => (data?.transactionHeatmap ?? []).reduce((s, p) => s + p.spend, 0),
+    [data?.transactionHeatmap],
+  );
+  /** The share of that total the backend could attribute to a category. */
+  const categorisedTotal = useMemo(
+    () => distribution.reduce((s, d) => s + d.total, 0),
+    [distribution],
+  );
+  const uncategorised = Math.max(0, periodTotal - categorisedTotal);
 
   // habitIdentifier carries no icon_name — borrow it from the distribution rows,
   // which the backend groups by the same category name.
@@ -97,7 +114,10 @@ export default function TrendsScreen() {
     [data, t, month],
   );
 
-  const isEmpty = !!data && periodTotal === 0;
+  // "Empty" means the period genuinely had no debits — not merely that none of
+  // them carried a category. Keying this off the distribution used to blank the
+  // whole screen for a month with real spending but no categories on it.
+  const isEmpty = !!data && periodTotal === 0 && categorisedTotal === 0;
 
   return (
     <Screen>
@@ -189,7 +209,9 @@ export default function TrendsScreen() {
                 {formatINR(periodTotal)}
               </AppText>
               <AppText variant="bodyMedium" color={t.candyText} style={{ fontSize: 12, marginTop: 2, opacity: 0.8 }}>
-                across {distribution.length} {distribution.length === 1 ? 'category' : 'categories'}
+                {distribution.length === 0
+                  ? 'not categorised yet'
+                  : `across ${distribution.length} ${distribution.length === 1 ? 'category' : 'categories'}`}
               </AppText>
             </Card>
 
@@ -218,9 +240,27 @@ export default function TrendsScreen() {
               />
             </View>
 
-            {distribution.length > 0 && (
-              <ChartCard title="Where it went" meta={formatINR(periodTotal)}>
+            {distribution.length > 0 ? (
+              <ChartCard title="Where it went" meta={formatINR(categorisedTotal)}>
                 <CategoryBars t={t} data={distribution} />
+                {uncategorised > 0 ? (
+                  <AppText variant="body" tone="muted" style={{ fontSize: 11, marginTop: t.spacing.sm }}>
+                    {formatINR(uncategorised)} isn’t shown here — those transactions have no
+                    category yet.
+                  </AppText>
+                ) : null}
+              </ChartCard>
+            ) : (
+              <ChartCard title="Where it went" meta="no categories">
+                <AppText variant="bodyMedium" style={{ fontSize: 13 }}>
+                  None of this period’s {formatINR(periodTotal)} has a category, so there’s no
+                  breakdown to draw.
+                </AppText>
+                <AppText variant="body" tone="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                  Imported transactions fall back to a category named “Miscellaneous”. If you
+                  don’t have one, they’re saved with no category at all — add your categories in
+                  Profile → Manage, then re-import.
+                </AppText>
               </ChartCard>
             )}
 

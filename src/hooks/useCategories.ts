@@ -22,12 +22,16 @@ export function useCategories() {
   });
 }
 
-/** Any category write invalidates the shared list so every screen re-reads it. */
+/**
+ * Any category write invalidates the shared list so every screen re-reads it.
+ * `onSettled` rather than `onSuccess` — see `useAccounts` for why a *failed*
+ * write is precisely when the cached list needs re-syncing.
+ */
 export function useCreateCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CategoryCreate) => createCategory(input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['categories'] }),
   });
 }
 
@@ -35,7 +39,7 @@ export function useUpdateCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, input }: { id: number; input: CategoryUpdate }) => updateCategory(id, input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['categories'] }),
   });
 }
 
@@ -43,6 +47,6 @@ export function useDeleteCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => deleteCategory(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['categories'] }),
   });
 }

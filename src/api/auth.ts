@@ -43,6 +43,25 @@ export async function resetPasswordWithAnswer(input: RecoveryResetInput): Promis
   await api.post('/auth/recovery/reset', input);
 }
 
+export type SecurityQuestionInput = {
+  current_password: string;
+  question: string;
+  answer: string;
+};
+
+/**
+ * POST /auth/security-question — set or replace the account-recovery question
+ * that `getRecoveryQuestion` later serves to the forgot-password flow.
+ *
+ * The current password is required by the backend so a stolen session token
+ * alone can't seed a recovery answer and take the account over. Answers are
+ * stored `strip().lower()`-normalised, so case and stray spaces don't matter
+ * when the answer is checked later.
+ */
+export async function setSecurityQuestion(input: SecurityQuestionInput): Promise<void> {
+  await api.post('/auth/security-question', input);
+}
+
 export type ChangePasswordInput = { old_password: string; new_password: string };
 
 /** POST /auth/change-password — change the signed-in user's password. */

@@ -20,6 +20,11 @@ export default function HomeScreen() {
   const { data, isLoading, isError, refetch, isRefetching, isPlaceholderData } = useDashboard(month);
 
   const initial = user?.username?.[0]?.toUpperCase() ?? '?';
+
+  // Recent activity is a teaser for the Expenses tab. `navigate` rather than
+  // `push` so repeat taps switch tabs instead of stacking duplicate screens.
+  const openExpenses = () => router.navigate('/expenses' as Href);
+
   // A month is "empty" when it has no spending. We key off totalSpent alone
   // because the backend's recentTransactions list is global-latest (not
   // month-scoped), so it's non-empty even for months with zero activity.
@@ -119,13 +124,32 @@ export default function HomeScreen() {
               </Card>
             )}
 
-            {/* Recent activity — most recent 4 only */}
+            {/* Recent activity — most recent 4; anywhere here opens Expenses */}
             {data.recentTransactions.length > 0 && (
               <Card>
-                <AppText variant="label">Recent activity</AppText>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'baseline',
+                  }}
+                >
+                  <AppText variant="label">Recent activity</AppText>
+                  <Pressable onPress={openExpenses} hitSlop={8}>
+                    <AppText variant="link" style={{ fontSize: 12 }}>
+                      View all →
+                    </AppText>
+                  </Pressable>
+                </View>
                 <View style={{ marginTop: t.spacing.sm }}>
                   {data.recentTransactions.slice(0, 4).map((txn, i, shown) => (
-                    <TxnRow key={txn.id} t={t} txn={txn} last={i === shown.length - 1} />
+                    <TxnRow
+                      key={txn.id}
+                      t={t}
+                      txn={txn}
+                      last={i === shown.length - 1}
+                      onPress={openExpenses}
+                    />
                   ))}
                 </View>
               </Card>
@@ -171,17 +195,29 @@ function KpiCard({ t, label, value }: { t: Theme; label: string; value: string }
   );
 }
 
-function TxnRow({ t, txn, last }: { t: Theme; txn: RecentTransaction; last: boolean }) {
+function TxnRow({
+  t,
+  txn,
+  last,
+  onPress,
+}: {
+  t: Theme;
+  txn: RecentTransaction;
+  last: boolean;
+  onPress: () => void;
+}) {
   return (
-    <View
-      style={{
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingVertical: t.spacing.sm,
         borderBottomWidth: last ? 0 : t.border.row,
         borderBottomColor: t.colors.hair,
-      }}
+        opacity: pressed ? 0.6 : 1,
+      })}
     >
       <View style={{ flexShrink: 1, paddingRight: t.spacing.sm }}>
         <AppText variant="bodyMedium" numberOfLines={1}>
@@ -194,7 +230,7 @@ function TxnRow({ t, txn, last }: { t: Theme; txn: RecentTransaction; last: bool
       <AppText variant="money" style={{ fontSize: 15 }}>
         {formatINR(txn.amount)}
       </AppText>
-    </View>
+    </Pressable>
   );
 }
 

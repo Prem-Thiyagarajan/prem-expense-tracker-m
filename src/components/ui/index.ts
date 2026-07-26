@@ -7,4 +7,5 @@ export { Chip } from './Chip';
 export { TextField } from './TextField';
 export { BottomSheet } from './BottomSheet';
 export { Screen } from './Screen';
+export { StatusBarScrim } from './StatusBarScrim';
 export { ToastProvider, useToast } from './Toast';

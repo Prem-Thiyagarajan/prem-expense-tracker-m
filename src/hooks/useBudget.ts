@@ -2,12 +2,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getBudgetPlan, saveBudgetPlan, type SaveBudgetItem } from '@/api/budget';
 import { monthStaleTime } from '@/lib/month';
+import { usePrefetchNeighbourMonths, useScreenFocused } from './useMonthWindow';
 
 /**
  * Budget plan + pacing/suggestions for a `YYYY-MM` month, cached per month.
- * See `useDashboard` for why `placeholderData` matters on month-keyed queries.
+ * See `useDashboard` for what `placeholderData` and neighbour prefetching do
+ * for month-keyed queries, and why the query itself is never focus-gated.
  */
 export function useBudget(month: string) {
+  const focused = useScreenFocused();
+
+  usePrefetchNeighbourMonths(month, focused, (m) => ({
+    queryKey: ['budgets', m],
+    queryFn: () => getBudgetPlan(m),
+  }));
+
   return useQuery({
     queryKey: ['budgets', month],
     queryFn: () => getBudgetPlan(month),

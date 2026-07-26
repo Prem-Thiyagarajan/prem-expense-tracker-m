@@ -9,6 +9,7 @@ import {
   registerRequest,
   RegisterInput,
 } from '@/api/auth';
+import { queryClient } from '@/api/queryClient';
 import { getToken } from '@/api/tokenStore';
 
 type Status = 'loading' | 'authed' | 'guest';
@@ -30,6 +31,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     await logoutRequest();
+    // The QueryClient is a module singleton, so it outlives the session. Without
+    // this, the next user to sign in inherits the previous user's cached
+    // accounts, transactions, dashboard and budgets — `['accounts']` in
+    // particular has a 10-minute staleTime, so it isn't even refetched.
+    queryClient.clear();
     if (!mounted.current) return;
     setUser(null);
     setStatus('guest');
@@ -62,6 +68,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // On any 401, the API client clears the token; reflect that as signed-out.
   useEffect(() => {
     setUnauthorizedHandler(() => {
+      // An expired session ends the same way a sign-out does — drop the cache so
+      // whoever signs in next starts from the server, not this user's data.
+      queryClient.clear();
       setUser(null);
       setStatus('guest');
     });
@@ -71,6 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback(
     async (identifier: string, password: string, rememberMe: boolean) => {
       await loginRequest({ identifier, password, remember_me: rememberMe });
+      // Belt and braces: every route into an authenticated session starts from
+      // an empty cache, even ones that bypassed signOut (an expired token, or a
+      // crash that left entries behind).
+      queryClient.clear();
       const me = await getMe();
       setUser(me);
       setStatus('authed');
