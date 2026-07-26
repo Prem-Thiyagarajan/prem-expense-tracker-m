@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { InteractionManager, Pressable, View } from 'react-native';
 
 import { ChevronLeftIcon, ChevronRightIcon } from '@/components/icons';
 import { MonthPickerSheet } from '@/components/MonthPickerSheet';
@@ -38,8 +38,11 @@ export function MonthSwitcher() {
         value={month}
         onClose={() => setPickerOpen(false)}
         onSelect={(m) => {
-          setMonth(m);
+          // Dismiss first, then switch. Doing both in one tick made the sheet's
+          // close animation share the JS thread with the screen's re-render, so
+          // the sheet appeared to hang on the way out.
           setPickerOpen(false);
+          InteractionManager.runAfterInteractions(() => setMonth(m));
         }}
       />
     </View>

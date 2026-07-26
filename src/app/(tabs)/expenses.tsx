@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, SectionList, View } from 'react-native';
+import { Animated, Pressable, RefreshControl, ScrollView, SectionList, View } from 'react-native';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -169,6 +169,16 @@ export default function ExpensesScreen() {
   const total = q.data?.totalCount ?? 0;
   const filtersActive = typeFilter !== 'all' || categoryId != null || search.trim() !== '';
   const refreshing = q.isFetching && !q.isLoading;
+
+  // This screen's header is fixed rather than scrolling, so it gets the rule
+  // that `StatusBarScrim` draws on the other tabs — same signal ("a fixed layer
+  // sits above the content"), attached to the header instead of the notch band.
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerRule = scrollY.interpolate({
+    inputRange: [0, 14],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
   const selectedCategory = categoryId != null ? categoryById.get(categoryId) : undefined;
 
   return (
@@ -240,6 +250,16 @@ export default function ExpensesScreen() {
             onPress={() => setGridOpen(true)}
           />
         </ScrollView>
+
+        {/* Full-bleed rule that fades in once the list slides beneath. */}
+        <Animated.View
+          style={{
+            height: t.border.row,
+            marginHorizontal: -t.spacing.lg,
+            backgroundColor: t.colors.line,
+            opacity: headerRule,
+          }}
+        />
       </View>
 
       {q.isLoading ? (
@@ -267,6 +287,8 @@ export default function ExpensesScreen() {
           }}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
+          scrollEventThrottle={16}
+          onScroll={(e) => scrollY.setValue(e.nativeEvent.contentOffset.y)}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={q.refetch} tintColor={t.colors.muted} />
           }

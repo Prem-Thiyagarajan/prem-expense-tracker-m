@@ -2,22 +2,34 @@ import { useQuery } from '@tanstack/react-query';
 
 import { getTransactions } from '@/api/transactions';
 import { monthRange, monthStaleTime } from '@/lib/month';
+import { usePrefetchNeighbourMonths, useScreenFocused } from './useMonthWindow';
 
 // A month is fetched in one shot so the list can filter/search client-side
 // (instant, no refetch) and the category grid can show accurate per-category
 // counts. This ceiling comfortably covers a real month; `truncated` flags the
 // rare overflow so the UI can hint that older rows are hidden.
-const MONTH_LIMIT = 500;
+export const MONTH_LIMIT = 500;
 
 /**
  * All of a month's transactions in one cached query (newest-first, per the
  * backend's default sort). Type/category/search filtering happens client-side
  * off this list, so switching filters never hits the network.
  *
- * See `useDashboard` for why `placeholderData` matters on month-keyed queries.
+ * See `useDashboard` for what `placeholderData` and neighbour prefetching do
+ * for month-keyed queries, and why the query itself is never focus-gated.
  */
 export function useTransactions(month: string) {
   const { start, end } = monthRange(month);
+  const focused = useScreenFocused();
+
+  usePrefetchNeighbourMonths(month, focused, (m) => {
+    const range = monthRange(m);
+    return {
+      queryKey: ['transactions', m],
+      queryFn: () =>
+        getTransactions({ page: 1, limit: MONTH_LIMIT, start_date: range.start, end_date: range.end }),
+    };
+  });
 
   return useQuery({
     queryKey: ['transactions', month],

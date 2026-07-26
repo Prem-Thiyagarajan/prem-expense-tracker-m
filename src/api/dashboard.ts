@@ -1,8 +1,13 @@
 import { api } from './client';
 
-/** One of the top spending categories for the month. */
+/**
+ * One of the top spending categories for the month. `id` is null for the
+ * "Uncategorised" bucket — spend on transactions with no category, which the
+ * backend reports as its own row rather than omitting it (an inner join used to
+ * drop it, letting the breakdown silently undershoot the headline total).
+ */
 export type TopCategory = {
-  id: number;
+  id: number | null;
   category: string;
   amount: number;
   icon_name: string | null;

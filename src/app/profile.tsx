@@ -6,7 +6,9 @@ import { useAuth } from '@/auth/AuthProvider';
 import { ChangePasswordSheet } from '@/components/ChangePasswordSheet';
 import { DeleteAccountSheet } from '@/components/DeleteAccountSheet';
 import { ChevronLeftIcon, ChevronRowIcon } from '@/components/icons';
-import { AppText, Card, Screen } from '@/components/ui';
+import { SecurityQuestionSheet } from '@/components/SecurityQuestionSheet';
+import { UploadStatementsSheet } from '@/components/UploadStatementsSheet';
+import { AppText, Card, Screen, useToast } from '@/components/ui';
 import { PressableSurface, Surface } from '@/components/ui/Surface';
 import { useTheme, useThemeControls, type Theme, type ThemePreference } from '@/theme';
 
@@ -22,19 +24,43 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
 
   const [pwOpen, setPwOpen] = useState(false);
+  const [questionOpen, setQuestionOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const toast = useToast();
 
   const initial = user?.username?.[0]?.toUpperCase() ?? '?';
 
   return (
     <Screen tabBarInset={false}>
       <View style={{ gap: t.spacing.xl }}>
-        {/* Header */}
+        {/* Header: back · title · import statements */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
           <Pressable onPress={() => router.back()} hitSlop={8}>
             <ChevronLeftIcon size={24} color={t.colors.ink} />
           </Pressable>
-          <AppText variant="title">Profile</AppText>
+          <AppText variant="title" style={{ flex: 1 }}>
+            Profile
+          </AppText>
+          <Pressable onPress={() => setUploadOpen(true)} hitSlop={8}>
+            <Surface
+              backgroundColor={t.candy.yellow}
+              offset={t.shadowOffset.chip}
+              radius={t.radius.chip}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                paddingHorizontal: t.spacing.md,
+                paddingVertical: 7,
+              }}
+            >
+              <AppText style={{ fontSize: 13 }}>📄</AppText>
+              <AppText variant="subheading" color={t.candyText} style={{ fontSize: 12 }}>
+                Import
+              </AppText>
+            </Surface>
+          </Pressable>
         </View>
 
         {/* Identity */}
@@ -94,7 +120,14 @@ export default function ProfileScreen() {
         {/* Security */}
         <Section t={t} title="Security">
           <Card padded={false}>
-            <DrillRow t={t} emoji="🔒" label="Change password" last onPress={() => setPwOpen(true)} />
+            <DrillRow t={t} emoji="🔒" label="Change password" onPress={() => setPwOpen(true)} />
+            <DrillRow
+              t={t}
+              emoji="🛟"
+              label="Security question"
+              last
+              onPress={() => setQuestionOpen(true)}
+            />
           </Card>
         </Section>
 
@@ -107,7 +140,13 @@ export default function ProfileScreen() {
         </Section>
       </View>
 
+      <UploadStatementsSheet
+        visible={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        onUploaded={(message) => toast.show(message)}
+      />
       <ChangePasswordSheet visible={pwOpen} onClose={() => setPwOpen(false)} />
+      <SecurityQuestionSheet visible={questionOpen} onClose={() => setQuestionOpen(false)} />
       <DeleteAccountSheet visible={deleteOpen} onClose={() => setDeleteOpen(false)} />
     </Screen>
   );

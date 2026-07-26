@@ -1,11 +1,24 @@
 import { useMutation } from '@tanstack/react-query';
 
-import { changePassword, deleteMyAccount, type ChangePasswordInput } from '@/api/auth';
+import {
+  changePassword,
+  deleteMyAccount,
+  setSecurityQuestion,
+  type ChangePasswordInput,
+  type SecurityQuestionInput,
+} from '@/api/auth';
 
 /** POST /auth/change-password — no cached data to touch, so no invalidation. */
 export function useChangePassword() {
   return useMutation({
     mutationFn: (input: ChangePasswordInput) => changePassword(input),
+  });
+}
+
+/** POST /auth/security-question — nothing cached reads it, so no invalidation. */
+export function useSetSecurityQuestion() {
+  return useMutation({
+    mutationFn: (input: SecurityQuestionInput) => setSecurityQuestion(input),
   });
 }
 
