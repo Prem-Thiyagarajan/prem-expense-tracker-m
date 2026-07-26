@@ -25,7 +25,7 @@ export default function BudgetScreen() {
   const { user } = useAuth();
   const toast = useToast();
   const { month, label } = useMonth();
-  const { data, isLoading, isError, refetch, isRefetching } = useBudget(month);
+  const { data, isLoading, isError, refetch, isRefetching, isPlaceholderData } = useBudget(month);
   const { data: categories } = useCategories();
   const [editing, setEditing] = useState(false);
   const [viewingAll, setViewingAll] = useState(false);
@@ -92,7 +92,9 @@ export default function BudgetScreen() {
             onSetUp={() => setEditing(true)}
           />
         ) : (
-          <>
+          // Dimmed while the previous month's plan is still on screen, so a
+          // stale figure is never shown as if it belonged to the header's month.
+          <View style={{ gap: t.spacing.lg, opacity: isPlaceholderData ? 0.45 : 1 }}>
             <HeroPaceCard
               t={t}
               spent={totalSpent}
@@ -159,7 +161,7 @@ export default function BudgetScreen() {
             )}
 
             <Button label="Edit budgets" variant="neutral" onPress={() => setEditing(true)} />
-          </>
+          </View>
         )}
       </View>
 

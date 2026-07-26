@@ -17,7 +17,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { month, label } = useMonth();
-  const { data, isLoading, isError, refetch, isRefetching } = useDashboard(month);
+  const { data, isLoading, isError, refetch, isRefetching, isPlaceholderData } = useDashboard(month);
 
   const initial = user?.username?.[0]?.toUpperCase() ?? '?';
   // A month is "empty" when it has no spending. We key off totalSpent alone
@@ -70,7 +70,9 @@ export default function HomeScreen() {
         ) : isEmpty ? (
           <EmptyCard t={t} label={label} />
         ) : data ? (
-          <>
+          // Dimmed while the previous month's data is still on screen, so a
+          // stale figure is never shown as if it belonged to the header's month.
+          <View style={{ gap: t.spacing.lg, opacity: isPlaceholderData ? 0.45 : 1 }}>
             {/* Hero: total spent this month + change vs last month */}
             <Card background={t.candy.mint}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -128,7 +130,7 @@ export default function HomeScreen() {
                 </View>
               </Card>
             )}
-          </>
+          </View>
         ) : null}
       </View>
     </Screen>

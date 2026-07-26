@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
@@ -9,6 +9,7 @@ import { AppText } from '@/components/ui';
 import { Surface } from '@/components/ui/Surface';
 import { formatINR, formatINRCompact } from '@/lib/format';
 import type { Theme } from '@/theme';
+import { ChartLegend } from './ChartLegend';
 import { useChartWidth } from './useChartWidth';
 
 const H = 150; // full SVG height, including the x-axis label gutter
@@ -55,15 +56,22 @@ export function BudgetPaceChart({
   const plotR = width - PLOT_R;
   const plotW = plotR - plotL;
 
-  // Map a finger x-position to the nearest day with actual data, then select it.
+  // Map a finger x-position to the nearest day with actual data.
+  const dayAt = useCallback(
+    (fx: number) => {
+      const rel = (fx - plotL) / plotW;
+      return Math.max(1, Math.min(maxDay, Math.round(rel * (daysInMonthCount - 1)) + 1));
+    },
+    [plotL, plotW, daysInMonthCount, maxDay],
+  );
+
+  /** Scrubbing always moves the readout to the day under the finger. */
   const select = useCallback(
     (fx: number) => {
       if (!canDraw) return;
-      const rel = (fx - plotL) / plotW;
-      const day = Math.round(rel * (daysInMonthCount - 1)) + 1;
-      setSel(Math.max(1, Math.min(maxDay, day)));
+      setSel(dayAt(fx));
     },
-    [canDraw, plotL, plotW, daysInMonthCount, maxDay],
+    [canDraw, dayAt],
   );
 
   const gesture = useMemo(() => {
@@ -102,41 +110,51 @@ export function BudgetPaceChart({
 
       <View onLayout={onLayout} style={{ height: H, width: '100%', marginTop: t.spacing.sm }}>
         {canDraw ? (
-          <GestureDetector gesture={gesture}>
-            <View>
-              <PaceSvg
-                t={t}
-                actual={actual}
-                totalBudget={totalBudget}
-                daysInMonthCount={daysInMonthCount}
-                maxVal={maxVal}
-                width={width}
-                sel={activeSel}
-              />
-              {activeSel != null ? (
-                <Tooltip
+          // The tooltip sits outside the GestureDetector so its own tap target
+          // isn't swallowed by the chart's scrub gesture.
+          <>
+            <GestureDetector gesture={gesture}>
+              <View>
+                <PaceSvg
                   t={t}
-                  day={activeSel}
-                  actualValue={actualAt(activeSel)}
-                  idealValue={idealAt(activeSel)}
-                  left={Math.max(0, Math.min(width - TOOLTIP_W, x(activeSel) - TOOLTIP_W / 2))}
-                  top={Math.max(0, y(Math.max(actualAt(activeSel), idealAt(activeSel))) - 62)}
+                  actual={actual}
+                  totalBudget={totalBudget}
+                  daysInMonthCount={daysInMonthCount}
+                  maxVal={maxVal}
+                  width={width}
+                  sel={activeSel}
                 />
-              ) : null}
-            </View>
-          </GestureDetector>
+              </View>
+            </GestureDetector>
+            {activeSel != null ? (
+              <Tooltip
+                t={t}
+                day={activeSel}
+                actualValue={actualAt(activeSel)}
+                idealValue={idealAt(activeSel)}
+                left={Math.max(0, Math.min(width - TOOLTIP_W, x(activeSel) - TOOLTIP_W / 2))}
+                top={Math.max(0, y(Math.max(actualAt(activeSel), idealAt(activeSel))) - 62)}
+                onDismiss={() => setSel(null)}
+              />
+            ) : null}
+          </>
         ) : null}
       </View>
 
-      <View style={{ flexDirection: 'row', gap: t.spacing.md, marginTop: t.spacing.xs }}>
-        <Legend t={t} color={t.candy.coral} label="Actual spend" />
-        <Legend t={t} color={t.colors.muted} label="Ideal pace" dashed />
-      </View>
+      <ChartLegend
+        items={[
+          { label: 'Actual spend', color: t.candy.coral },
+          { label: 'Ideal pace', color: t.colors.muted, dashed: true },
+        ]}
+      />
     </View>
   );
 }
 
-/** Floating readout comparing both series on the scrubbed day. */
+/**
+ * Floating readout comparing both series on the scrubbed day. Tapping it
+ * dismisses it — the bubble is its own dismiss target, hinted by the ×.
+ */
 function Tooltip({
   t,
   day,
@@ -144,6 +162,7 @@ function Tooltip({
   idealValue,
   left,
   top,
+  onDismiss,
 }: {
   t: Theme;
   day: number;
@@ -151,10 +170,15 @@ function Tooltip({
   idealValue: number;
   left: number;
   top: number;
+  onDismiss: () => void;
 }) {
   const ahead = actualValue > idealValue;
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', left, top, width: TOOLTIP_W }}>
+    <Pressable
+      onPress={onDismiss}
+      hitSlop={6}
+      style={{ position: 'absolute', left, top, width: TOOLTIP_W }}
+    >
       <Surface
         backgroundColor={t.colors.card}
         borderWidth={t.border.row}
@@ -162,7 +186,12 @@ function Tooltip({
         offset={t.shadowOffset.chip}
         style={{ paddingHorizontal: t.spacing.sm, paddingVertical: 6 }}
       >
-        <AppText variant="label">Day {day}</AppText>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <AppText variant="label">Day {day}</AppText>
+          <AppText variant="label" tone="muted" style={{ fontSize: 12, letterSpacing: 0 }}>
+            ✕
+          </AppText>
+        </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 3 }}>
           <AppText variant="body" color={t.candy.coral} style={{ fontSize: 10 }}>
             Actual
@@ -180,7 +209,7 @@ function Tooltip({
           </AppText>
         </View>
       </Surface>
-    </View>
+    </Pressable>
   );
 }
 
@@ -312,26 +341,5 @@ function PaceSvg({
         />
       )}
     </Svg>
-  );
-}
-
-function Legend({ t, color, label, dashed }: { t: Theme; color: string; label: string; dashed?: boolean }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-      <View
-        style={{
-          width: 14,
-          height: dashed ? 0 : 3,
-          borderRadius: 2,
-          backgroundColor: dashed ? undefined : color,
-          borderTopWidth: dashed ? 2 : 0,
-          borderColor: color,
-          borderStyle: dashed ? 'dashed' : 'solid',
-        }}
-      />
-      <AppText variant="label" style={{ textTransform: 'none', letterSpacing: 0 }}>
-        {label}
-      </AppText>
-    </View>
   );
 }

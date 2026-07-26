@@ -1,5 +1,15 @@
 export { BudgetDepletionChart } from './BudgetDepletionChart';
 export { BudgetPaceChart } from './BudgetPaceChart';
+export { CategoryBars } from './CategoryBars';
 export { CategoryDonut } from './CategoryDonut';
+export { ChartCard } from './ChartCard';
+export { ChartLegend } from './ChartLegend';
+export type { LegendItem } from './ChartLegend';
+export { DayLineChart } from './DayLineChart';
+export type { DaySeries } from './DayLineChart';
+export { HabitQuadrant } from './HabitQuadrant';
+export { MonthlyBars } from './MonthlyBars';
+export { SpendCalendar } from './SpendCalendar';
 export { SpendTrend } from './SpendTrend';
+export { WeekdayProfile } from './WeekdayProfile';
 export { useChartWidth } from './useChartWidth';
