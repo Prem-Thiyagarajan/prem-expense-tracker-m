@@ -1,13 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getBudgetPlan, saveBudgetPlan, type SaveBudgetItem } from '@/api/budget';
+import { monthStaleTime } from '@/lib/month';
 
-/** Budget plan + pacing/suggestions for a `YYYY-MM` month, cached per month. */
+/**
+ * Budget plan + pacing/suggestions for a `YYYY-MM` month, cached per month.
+ * See `useDashboard` for why `placeholderData` matters on month-keyed queries.
+ */
 export function useBudget(month: string) {
   return useQuery({
     queryKey: ['budgets', month],
     queryFn: () => getBudgetPlan(month),
-    staleTime: 60_000,
+    staleTime: monthStaleTime(month),
+    placeholderData: (previous) => previous,
   });
 }
 

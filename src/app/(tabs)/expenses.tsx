@@ -13,7 +13,7 @@ import { useAddSheet } from '@/components/AddSheetHost';
 import { CategoryGridSheet } from '@/components/CategoryGridSheet';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { AppText, Button, Card, Chip, TextField } from '@/components/ui';
-import { PressableSurface } from '@/components/ui/Surface';
+import { PressableSurface, Surface } from '@/components/ui/Surface';
 import { useToast } from '@/components/ui/Toast';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCategories } from '@/hooks/useCategories';
@@ -176,7 +176,25 @@ export default function ExpensesScreen() {
       {/* Fixed header: title · month · count · search · filter chips. */}
       <View style={{ paddingHorizontal: t.spacing.lg, gap: t.spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <AppText variant="title">Expenses</AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+            {/* Every tab leads with its own tilted sticker tile — 💸 Home,
+                🧾 Expenses, 🎯 Budget, 📊 Trends. */}
+            <Surface
+              backgroundColor={t.candy.mint}
+              offset={t.shadowOffset.chip}
+              radius={t.radius.chip}
+              style={{
+                width: 40,
+                height: 40,
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: [{ rotate: '-6deg' }],
+              }}
+            >
+              <AppText style={{ fontSize: 20 }}>🧾</AppText>
+            </Surface>
+            <AppText variant="title">Expenses</AppText>
+          </View>
           <MonthSwitcher />
         </View>
         <AppText variant="label">

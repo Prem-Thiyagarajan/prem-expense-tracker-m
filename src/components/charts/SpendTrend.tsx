@@ -37,28 +37,45 @@ export function SpendTrend({ t, data, title }: { t: Theme; data: TrendPoint[]; t
   // Guard against a stale selection when the month (and series length) changes.
   const activeSel = sel != null && sel < n ? sel : null;
 
-  // Map a finger x-position to the nearest day index, then select it.
+  // Map a finger x-position to the nearest day index.
+  const indexAt = useCallback(
+    (fx: number) => {
+      const plotW = width - PLOT_L - PLOT_R;
+      const rel = (fx - PLOT_L) / plotW;
+      return Math.max(0, Math.min(n - 1, Math.round(rel * (n - 1))));
+    },
+    [n, width],
+  );
+
+  /** Scrubbing always moves the readout to the day under the finger. */
   const select = useCallback(
     (fx: number) => {
       if (n < 2 || width <= 0) return;
-      const plotW = width - PLOT_L - PLOT_R;
-      const rel = (fx - PLOT_L) / plotW;
-      const i = Math.max(0, Math.min(n - 1, Math.round(rel * (n - 1))));
-      setSel(i);
+      setSel(indexAt(fx));
     },
-    [n, width],
+    [n, width, indexAt],
+  );
+
+  /** Tapping the day that's already open clears the readout. */
+  const toggle = useCallback(
+    (fx: number) => {
+      if (n < 2 || width <= 0) return;
+      const i = indexAt(fx);
+      setSel((prev) => (prev === i ? null : i));
+    },
+    [n, width, indexAt],
   );
 
   const gesture = useMemo(() => {
     // A stationary touch is a tap; a horizontal drag is a scrub. failOffsetY
     // lets a vertical drag fall through to the surrounding ScrollView.
-    const tap = Gesture.Tap().onEnd((e) => runOnJS(select)(e.x));
+    const tap = Gesture.Tap().onEnd((e) => runOnJS(toggle)(e.x));
     const pan = Gesture.Pan()
       .activeOffsetX([-8, 8])
       .failOffsetY([-10, 10])
       .onUpdate((e) => runOnJS(select)(e.x));
     return Gesture.Race(pan, tap);
-  }, [select]);
+  }, [select, toggle]);
 
   return (
     <View>

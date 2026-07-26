@@ -49,6 +49,16 @@ export function monthProgress(month: string): { elapsed: number; total: number }
 }
 
 /**
+ * How long a month's fetched data stays fresh. A month that has already ended
+ * can only change if the user edits it — and every mutation invalidates its keys
+ * explicitly (CONVENTIONS §7) — so past months cache far longer than the live
+ * one. This is what makes paging back through history feel instant.
+ */
+export function monthStaleTime(month: string): number {
+  return month < currentMonth() ? 30 * 60_000 : 60_000;
+}
+
+/**
  * Inclusive `start`/`end` date bounds (`YYYY-MM-DD`) for a `YYYY-MM` month —
  * used as the `start_date`/`end_date` params on GET /transactions.
  *
