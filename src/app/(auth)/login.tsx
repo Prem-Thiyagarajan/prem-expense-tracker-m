@@ -100,7 +100,7 @@ export default function LoginScreen() {
                 </AppText>
               ) : null}
             </Surface>
-            <AppText variant="bodyMedium">Remember me (7 days)</AppText>
+            <AppText variant="bodyMedium">Remember me (30 days)</AppText>
           </Pressable>
 
           <Pressable onPress={() => setForgotVisible(true)} hitSlop={6}>
