@@ -7,10 +7,15 @@ import { clearToken, getToken } from './tokenStore';
  * The single axios instance for the app — mirrors the web app's apiClient
  * pattern (only this layer talks HTTP). Base URL is env-configurable.
  */
+// Render's free tier spins the service down after ~15 minutes of inactivity, and
+// the cold start can take the better part of a minute. A short timeout turns that
+// into a spurious "network error" on the first request after an idle period.
+const REQUEST_TIMEOUT_MS = 60000;
+
 export const api = axios.create({
   baseURL: env.apiBaseUrl,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 20000,
+  timeout: REQUEST_TIMEOUT_MS,
 });
 
 // Attach the bearer token (from secure storage) to every request.

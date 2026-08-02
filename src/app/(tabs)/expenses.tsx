@@ -181,7 +181,9 @@ export default function ExpensesScreen() {
   useEffect(() => {
     if (swapStartedAt.current == null) return;
     const elapsed = Date.now() - swapStartedAt.current;
-    console.log(`[expenses] visibleSections committed after ${elapsed}ms (${visibleSections.length} sections)`);
+    if (__DEV__) {
+      console.log(`[expenses] visibleSections committed after ${elapsed}ms (${visibleSections.length} sections)`);
+    }
     swapStartedAt.current = null;
   }, [visibleSections]);
 
