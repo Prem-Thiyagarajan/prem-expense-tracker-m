@@ -60,7 +60,7 @@ export default function LoginScreen() {
             Welcome back!
           </AppText>
           <AppText variant="body" tone="muted">
-            Log in to your Pocket.
+            Log in to your ExpenseTracker.
           </AppText>
         </View>
 

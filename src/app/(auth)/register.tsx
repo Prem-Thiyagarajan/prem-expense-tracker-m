@@ -55,7 +55,7 @@ export default function RegisterScreen() {
             Create account
           </AppText>
           <AppText variant="body" tone="muted">
-            Start tracking in your Pocket.
+            Start tracking in ExpenseTracker.
           </AppText>
         </View>
 
