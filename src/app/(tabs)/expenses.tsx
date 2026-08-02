@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { Account } from '@/api/accounts';
 import type { Category } from '@/api/categories';
+import { invalidateTransactionDerived } from '@/api/queryClient';
 import { deleteTransaction, type Transaction, type TxnType } from '@/api/transactions';
 import { useAddSheet } from '@/components/AddSheetHost';
 import { CategoryGridSheet } from '@/components/CategoryGridSheet';
@@ -85,10 +86,7 @@ export default function ExpensesScreen() {
   const commitDelete = useCallback(
     (txn: Transaction) => {
       deleteTransaction(txn.id)
-        .then(() => {
-          qc.invalidateQueries({ queryKey: ['transactions'] });
-          qc.invalidateQueries({ queryKey: ['dashboard'] });
-        })
+        .then(() => invalidateTransactionDerived(qc))
         .catch(() => toast.show('Couldn’t delete — pull to refresh.'));
     },
     [qc, toast],

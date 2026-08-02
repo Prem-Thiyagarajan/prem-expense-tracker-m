@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { KeyboardAvoidingView, Modal, Pressable, View, ViewStyle } from 'react-native';
+import { Keyboard, Modal, Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -18,6 +18,12 @@ const FALLBACK_H = 800;
 /** Drag past this (or flick faster than VELOCITY_CLOSE) to dismiss. */
 const CLOSE_DISTANCE = 110;
 const VELOCITY_CLOSE = 800;
+/**
+ * Scrim left visible below the status bar. Without a top bound a tall sheet
+ * grows until its grabber sits under the system status bar, and dragging it
+ * down pulls the notification shade instead of the sheet.
+ */
+const TOP_GAP = 24;
 
 type Props = {
   visible: boolean;
@@ -42,6 +48,30 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
   const translateY = useSharedValue(FALLBACK_H);
   const scrim = useSharedValue(0);
   const sheetH = useSharedValue(FALLBACK_H);
+
+  /**
+   * Keyboard height, tracked by hand rather than with `KeyboardAvoidingView`:
+   * under Android edge-to-edge (the default since Expo SDK 54) that component
+   * does not reliably return its padding to zero when the IME hides, leaving a
+   * dead gap below the sheet. Listening to the events directly makes the closed
+   * state unambiguous — hide always means zero.
+   */
+  const keyboardH = useSharedValue(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, (e) => {
+      keyboardH.value = withTiming(e.endCoordinates.height, { duration: 220 });
+    });
+    const hide = Keyboard.addListener(hideEvent, () => {
+      keyboardH.value = withTiming(0, { duration: 180 });
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [keyboardH]);
 
   useEffect(() => {
     if (visible) {
@@ -94,38 +124,37 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
 
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
   const scrimStyle = useAnimatedStyle(() => ({ opacity: scrim.value }));
+  // The sheet already pads itself by `insets.bottom`, so subtract that here —
+  // otherwise the nav-bar inset is counted twice while the keyboard is up.
+  const keyboardStyle = useAnimatedStyle(() => ({
+    paddingBottom: Math.max(0, keyboardH.value - insets.bottom),
+  }));
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={dismiss}>
       {/* Gestures inside an RN Modal need their own root on Android. */}
       <GestureHandlerRootView style={{ flex: 1 }}>
-        {/* Lifts the sheet clear of the keyboard so a focused field — and the
-            sheet's pinned action button — stay visible. `padding` on BOTH
-            platforms: Android has been edge-to-edge since Expo SDK 54, so the
-            window no longer resizes for the IME and there is nothing to
-            double-count — the view pads by the keyboard frame it hears about
-            from Keyboard events. The sheet's `flexShrink` lets it give way
-            when the remaining space is tight. */}
-        <KeyboardAvoidingView
-          behavior="padding"
-          style={{ flex: 1, justifyContent: 'flex-end' }}
+        {/* Full-bleed scrim. Kept as a sibling of the padded container below so
+            it still covers the status-bar strip that TOP_GAP reserves. */}
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { backgroundColor: t.colors.scrim }, scrimStyle]}
         >
-          <Animated.View
-            style={[
-              {
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: t.colors.scrim,
-              },
-              scrimStyle,
-            ]}
-          >
-            <Pressable style={{ flex: 1 }} onPress={dismiss} />
-          </Animated.View>
+          <Pressable style={{ flex: 1 }} onPress={dismiss} />
+        </Animated.View>
 
+        {/* Bounds the sheet on both edges: TOP_GAP keeps a tall sheet's grabber
+            clear of the status bar (dragging there pulls the notification shade
+            instead of the sheet), and the animated bottom padding lifts it over
+            the keyboard. `box-none` lets taps in the empty area above the sheet
+            fall through to the scrim. The sheet's `flexShrink` lets it give way
+            when the remaining space is tight. */}
+        <Animated.View
+          pointerEvents="box-none"
+          style={[
+            { flex: 1, justifyContent: 'flex-end', paddingTop: insets.top + TOP_GAP },
+            keyboardStyle,
+          ]}
+        >
           <Animated.View
             onLayout={(e) => {
               sheetH.value = e.nativeEvent.layout.height;
@@ -169,7 +198,7 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
             </GestureDetector>
             {children}
           </Animated.View>
-        </KeyboardAvoidingView>
+        </Animated.View>
       </GestureHandlerRootView>
     </Modal>
   );

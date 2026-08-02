@@ -2,6 +2,7 @@ import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutChangeEvent, Pressable, ScrollView, View } from 'react-native';
 
+import { invalidateTransactionDerived } from '@/api/queryClient';
 import { createTag } from '@/api/tags';
 import {
   createTransaction,
@@ -176,8 +177,8 @@ export function AddTransactionForm({
       return editing ? updateTransaction(editing.id, body) : createTransaction(body);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['transactions'] });
-      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      invalidateTransactionDerived(qc);
+      // Tags too: the form can create new ones inline.
       qc.invalidateQueries({ queryKey: ['tags'] });
       toast.show(
         `${editing ? 'Updated' : 'Saved'} ✓ ${type === 'credit' ? '+' : '−'}${formatINR(numericAmount)}`,

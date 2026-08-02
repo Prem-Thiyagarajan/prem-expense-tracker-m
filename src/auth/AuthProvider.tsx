@@ -24,6 +24,20 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** Bootstrap retries before we stop waiting on an unreachable backend. */
+const BOOTSTRAP_ATTEMPTS = 3;
+const BOOTSTRAP_BACKOFF_MS = 1500;
+
+/**
+ * Only a 401 proves the token is bad. Everything else — timeout, offline, 5xx —
+ * says nothing about the session's validity.
+ */
+function isUnauthorized(e: unknown): boolean {
+  return (e as { response?: { status?: number } })?.response?.status === 401;
+}
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<Status>('loading');
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -50,15 +64,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (mounted.current) setStatus('guest');
         return;
       }
-      try {
-        const me = await getMe();
-        if (!mounted.current) return;
-        setUser(me);
-        setStatus('authed');
-      } catch {
-        await logoutRequest();
-        if (mounted.current) setStatus('guest');
+      // Retry transient failures before giving up. A Render free-tier cold start
+      // takes the better part of a minute, and the first request after the app
+      // has been idle is exactly when it happens.
+      for (let attempt = 0; attempt < BOOTSTRAP_ATTEMPTS; attempt++) {
+        try {
+          const me = await getMe();
+          if (!mounted.current) return;
+          setUser(me);
+          setStatus('authed');
+          return;
+        } catch (e) {
+          if (isUnauthorized(e)) {
+            // The token really is invalid — sign out for real.
+            await logoutRequest();
+            if (mounted.current) setStatus('guest');
+            return;
+          }
+          if (!mounted.current) return;
+          if (attempt < BOOTSTRAP_ATTEMPTS - 1) await delay(BOOTSTRAP_BACKOFF_MS * (attempt + 1));
+        }
       }
+
+      // Backend unreachable, token left intact. Load the shell rather than
+      // signing out a valid session because the server was slow to wake —
+      // every screen has its own error/retry state, and a genuine 401 on any
+      // later request still ejects through the interceptor above.
+      if (mounted.current) setStatus('authed');
     })();
     return () => {
       mounted.current = false;

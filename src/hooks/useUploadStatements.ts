@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { invalidateTransactionDerived } from '@/api/queryClient';
 import { uploadStatements, type StatementFile } from '@/api/uploads';
 
 /**
@@ -15,10 +16,8 @@ export function useUploadStatements() {
   return useMutation({
     mutationFn: (files: StatementFile[]) => uploadStatements(files),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      invalidateTransactionDerived(queryClient);
+      // Tags too: the importer's categorisation step can create new ones.
       queryClient.invalidateQueries({ queryKey: ['tags'] });
     },
   });

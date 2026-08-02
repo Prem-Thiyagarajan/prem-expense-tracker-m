@@ -6,12 +6,8 @@ import { useAuth } from '@/auth/AuthProvider';
 import { ForgotPasswordSheet } from '@/components/ForgotPasswordSheet';
 import { AppText, Button, Screen, TextField, useToast } from '@/components/ui';
 import { Surface } from '@/components/ui/Surface';
+import { apiErrorMessage } from '@/lib/apiError';
 import { useTheme } from '@/theme';
-
-function apiErrorMessage(e: unknown, fallback: string): string {
-  const detail = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-  return typeof detail === 'string' ? detail : fallback;
-}
 
 export default function LoginScreen() {
   const t = useTheme();
