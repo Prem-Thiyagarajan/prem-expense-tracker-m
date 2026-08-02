@@ -1,3 +1,4 @@
+import { useIsFocused } from '@react-navigation/native';
 import { useRouter, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
@@ -16,6 +17,7 @@ export default function HomeScreen() {
   const t = useTheme();
   const router = useRouter();
   const { user } = useAuth();
+  const isFocused = useIsFocused();
   const { month, label } = useMonth();
   const { data, isLoading, isError, refetch, isRefetching, isPlaceholderData } = useDashboard(month);
 
@@ -68,7 +70,12 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {isLoading ? (
+        {isLoading || !isFocused ? (
+          // Skipping the real content while blurred is what keeps arrow-tap
+          // navigation fast: charts/lists on the other three tabs would
+          // otherwise re-render on every month change even though nobody's
+          // looking at them. Data still fetches live (below) so the numbers
+          // are correct the instant this tab regains focus.
           <DashboardSkeleton t={t} />
         ) : isError ? (
           <ErrorCard t={t} onRetry={refetch} retrying={isRefetching} />

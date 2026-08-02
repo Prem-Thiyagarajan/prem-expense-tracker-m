@@ -1,6 +1,6 @@
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { LayoutChangeEvent, Pressable, ScrollView, View } from 'react-native';
 
 import { createTag } from '@/api/tags';
 import {
@@ -33,6 +33,9 @@ function displayAmount(raw: string): string {
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'] as const;
 
+/** Gap left above a revealed field so its label clears the scroll window's top. */
+const FIELD_REVEAL_GAP = 12;
+
 /**
  * The Add / Edit transaction form shown inside the global bottom sheet. Debit/
  * Credit segment, a big Archivo Black amount driven by a custom keypad, account
@@ -50,7 +53,6 @@ export function AddTransactionForm({
   const t = useTheme();
   const toast = useToast();
   const qc = useQueryClient();
-  const { height } = useWindowDimensions();
 
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
@@ -74,6 +76,53 @@ export function AddTransactionForm({
       setAccountId(accounts[0].id);
     }
   }, [accounts, accountId, editing]);
+
+  /**
+   * Keeping a focused text field visible.
+   *
+   * The sheet lifts clear of the keyboard, but that leaves a much shorter scroll
+   * window than the content needs — the amount hero and keypad alone fill most
+   * of it — so a field near the bottom (Note, Tags) would sit below the fold.
+   * Each field wrapper reports its offset via `onLayout`, which is already
+   * relative to the scroll content, so revealing one is a plain `scrollTo` with
+   * no measuring against the keyboard.
+   */
+  const scrollRef = useRef<ScrollView>(null);
+  const fieldTops = useRef<Record<string, number>>({});
+  const focusedField = useRef<string | null>(null);
+
+  const revealField = useCallback((key: string) => {
+    const y = fieldTops.current[key];
+    if (y == null) return;
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - FIELD_REVEAL_GAP), animated: true });
+  }, []);
+
+  const onFieldLayout = useCallback(
+    (key: string) => (e: LayoutChangeEvent) => {
+      fieldTops.current[key] = e.nativeEvent.layout.y;
+    },
+    [],
+  );
+
+  const fieldFocusProps = useCallback(
+    (key: string) => ({
+      onFocus: () => {
+        focusedField.current = key;
+        revealField(key);
+      },
+      onBlur: () => {
+        if (focusedField.current === key) focusedField.current = null;
+      },
+    }),
+    [revealField],
+  );
+
+  // The sheet shrinks *while* the keyboard animates in, so the scroll window is
+  // still full-height when the focus event fires. Re-revealing on the resize
+  // lands the field correctly without guessing at an animation delay.
+  const onScrollAreaLayout = useCallback(() => {
+    if (focusedField.current) revealField(focusedField.current);
+  }, [revealField]);
 
   const numericAmount = Number(amount || '0');
 
@@ -149,33 +198,39 @@ export function AddTransactionForm({
   const noAccounts = accounts != null && accounts.length === 0;
 
   return (
-    <View style={{ gap: t.spacing.md }}>
+    // Shrinks with the sheet so the scroll area below absorbs the space the
+    // keyboard takes, while the title and Save button stay put.
+    <View style={{ gap: t.spacing.md, flexShrink: 1 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <AppText variant="title">{editing ? 'Edit transaction' : 'Add transaction'}</AppText>
         <Segment t={t} value={type} onChange={setType} />
       </View>
 
-      {/* Amount hero + keypad — the money entry, kept together. */}
-      <View style={{ alignItems: 'center', paddingVertical: t.spacing.xs }}>
-        <AppText
-          variant="money"
-          color={type === 'credit' ? t.semantic.green : t.colors.ink}
-          style={{ fontSize: 44 }}
-          numberOfLines={1}
-        >
-          {type === 'credit' ? '+' : ''}
-          {displayAmount(amount)}
-        </AppText>
-      </View>
-      <Keypad t={t} onPress={pressKey} />
-
-      {/* Scrollable detail fields. */}
+      {/* Everything between the title and Save scrolls as one, so opening the
+          keyboard slides the amount hero and keypad out of the way instead of
+          squeezing the fields into a sliver. */}
       <ScrollView
-        style={{ maxHeight: height * 0.3 }}
+        ref={scrollRef}
+        style={{ flexShrink: 1 }}
         contentContainerStyle={{ gap: t.spacing.md, paddingBottom: t.spacing.sm }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        onLayout={onScrollAreaLayout}
       >
+        {/* Amount hero + keypad — the money entry, kept together. */}
+        <View style={{ alignItems: 'center', paddingVertical: t.spacing.xs }}>
+          <AppText
+            variant="money"
+            color={type === 'credit' ? t.semantic.green : t.colors.ink}
+            style={{ fontSize: 44 }}
+            numberOfLines={1}
+          >
+            {type === 'credit' ? '+' : ''}
+            {displayAmount(amount)}
+          </AppText>
+        </View>
+        <Keypad t={t} onPress={pressKey} />
+
         {/* Account */}
         <Field t={t} label="Account">
           {noAccounts ? (
@@ -224,54 +279,60 @@ export function AddTransactionForm({
         </Field>
 
         {/* Note */}
-        <TextField
-          label="Note"
-          placeholder="What was it for?"
-          value={note}
-          onChangeText={setNote}
-          autoCapitalize="sentences"
-        />
+        <View onLayout={onFieldLayout('note')}>
+          <TextField
+            label="Note"
+            placeholder="What was it for?"
+            value={note}
+            onChangeText={setNote}
+            autoCapitalize="sentences"
+            {...fieldFocusProps('note')}
+          />
+        </View>
 
         {/* Tags */}
-        <Field t={t} label="Tags">
-          <ChipScroller t={t}>
-            {(tags ?? []).map((tag) => (
-              <Chip
-                key={tag.id}
-                label={`#${tag.name}`}
-                selected={tagIds.includes(tag.id)}
-                candyColor={t.candy.pink}
-                onPress={() =>
-                  setTagIds((ids) =>
-                    ids.includes(tag.id) ? ids.filter((x) => x !== tag.id) : [...ids, tag.id],
-                  )
-                }
-              />
-            ))}
-            {newTagNames.map((name) => (
-              <Chip
-                key={`new-${name}`}
-                label={`#${name}`}
-                selected
-                candyColor={t.candy.pink}
-                onPress={() => setNewTagNames((n) => n.filter((x) => x !== name))}
-              />
-            ))}
-          </ChipScroller>
-          <View style={{ flexDirection: 'row', gap: t.spacing.sm, marginTop: t.spacing.sm }}>
-            <View style={{ flex: 1 }}>
-              <TextField
-                placeholder="Add a tag"
-                value={tagDraft}
-                onChangeText={setTagDraft}
-                onSubmitEditing={addTag}
-                returnKeyType="done"
-                autoCapitalize="none"
-              />
+        <View onLayout={onFieldLayout('tags')}>
+          <Field t={t} label="Tags">
+            <ChipScroller t={t}>
+              {(tags ?? []).map((tag) => (
+                <Chip
+                  key={tag.id}
+                  label={`#${tag.name}`}
+                  selected={tagIds.includes(tag.id)}
+                  candyColor={t.candy.pink}
+                  onPress={() =>
+                    setTagIds((ids) =>
+                      ids.includes(tag.id) ? ids.filter((x) => x !== tag.id) : [...ids, tag.id],
+                    )
+                  }
+                />
+              ))}
+              {newTagNames.map((name) => (
+                <Chip
+                  key={`new-${name}`}
+                  label={`#${name}`}
+                  selected
+                  candyColor={t.candy.pink}
+                  onPress={() => setNewTagNames((n) => n.filter((x) => x !== name))}
+                />
+              ))}
+            </ChipScroller>
+            <View style={{ flexDirection: 'row', gap: t.spacing.sm, marginTop: t.spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <TextField
+                  placeholder="Add a tag"
+                  value={tagDraft}
+                  onChangeText={setTagDraft}
+                  onSubmitEditing={addTag}
+                  returnKeyType="done"
+                  autoCapitalize="none"
+                  {...fieldFocusProps('tags')}
+                />
+              </View>
+              <Button label="Add" variant="neutral" fullWidth={false} onPress={addTag} />
             </View>
-            <Button label="Add" variant="neutral" fullWidth={false} onPress={addTag} />
-          </View>
-        </Field>
+          </Field>
+        </View>
 
         {/* Date */}
         <Field t={t} label="Date">

@@ -1,3 +1,4 @@
+import { useIsFocused } from '@react-navigation/native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -49,6 +50,7 @@ export default function TrendsScreen() {
   const t = useTheme();
   const router = useRouter();
   const { user } = useAuth();
+  const isFocused = useIsFocused();
   const { month, label } = useMonth();
 
   const [selection, setSelection] = useState<Selection>('month');
@@ -191,7 +193,11 @@ export default function TrendsScreen() {
           </View>
         </View>
 
-        {isLoading ? (
+        {isLoading || !isFocused ? (
+          // Blurred tabs skip the six chart components entirely — that's the
+          // cost that made arrow-tap navigation slow (all four tabs were
+          // re-rendering on every month change). Data keeps fetching live so
+          // this tab is correct on the first frame it regains focus.
           <TrendsSkeleton t={t} />
         ) : isError ? (
           <ErrorCard t={t} onRetry={refetch} retrying={isRefetching} />

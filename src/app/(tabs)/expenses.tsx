@@ -1,5 +1,6 @@
+import { useIsFocused } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import { Animated, Pressable, RefreshControl, ScrollView, SectionList, View } from 'react-native';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
@@ -50,6 +51,7 @@ function buildSections(txns: Transaction[]): Section[] {
 export default function ExpensesScreen() {
   const t = useTheme();
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const { month, label } = useMonth();
 
   const q = useTransactions(month);
@@ -155,6 +157,33 @@ export default function ExpensesScreen() {
   }, [all, typeFilter, categoryId, search, pendingId]);
 
   const sections = useMemo(() => buildSections(filtered), [filtered]);
+
+  // The SectionList is the single most expensive render in the app — each row
+  // is a ReanimatedSwipeable, and a month change replaces the whole array, so
+  // every row's gesture handler and layout gets rebuilt at once (this is what
+  // RN's own "large list slow to update" warning was tracing back to, and it
+  // was blocking the JS thread badly enough to stall unrelated network
+  // callbacks on other tabs). Freezing the data this tab renders while it's
+  // blurred — syncing only on focus — skips that cost for the 3 out of 4
+  // month-changes where this tab isn't visible. Kept as a live ref rather than
+  // unmounting the list so scroll position and swipe/expanded state survive
+  // switching tabs and back.
+  const [visibleSections, setVisibleSections] = useState(sections);
+  // TEMP: measures how long the swap itself takes to commit, to tell whether
+  // the 1.5-2s delay is React/JS-side (this number) or something after it
+  // (native view mounting, bridge traffic) that JS-side scheduling can't fix.
+  const swapStartedAt = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isFocused) return;
+    swapStartedAt.current = Date.now();
+    startTransition(() => setVisibleSections(sections));
+  }, [isFocused, sections]);
+  useEffect(() => {
+    if (swapStartedAt.current == null) return;
+    const elapsed = Date.now() - swapStartedAt.current;
+    console.log(`[expenses] visibleSections committed after ${elapsed}ms (${visibleSections.length} sections)`);
+    swapStartedAt.current = null;
+  }, [visibleSections]);
 
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const toggle = useCallback((id: number) => {
@@ -272,13 +301,13 @@ export default function ExpensesScreen() {
         <View style={{ padding: t.spacing.lg }}>
           <EmptyCard t={t} label={label} />
         </View>
-      ) : sections.length === 0 ? (
+      ) : visibleSections.length === 0 ? (
         <View style={{ padding: t.spacing.lg }}>
           <NoMatchesCard t={t} onClear={() => { setTypeFilter('all'); setCategoryId(null); setSearch(''); }} />
         </View>
       ) : (
         <SectionList
-          sections={sections}
+          sections={visibleSections}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{
             paddingHorizontal: t.spacing.lg,
@@ -288,6 +317,15 @@ export default function ExpensesScreen() {
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
           scrollEventThrottle={16}
+          // A month swap replaces every row at once (each one a
+          // ReanimatedSwipeable), so keep each render batch small and let
+          // far-offscreen rows unmount rather than trying to build them all
+          // in one pass.
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          updateCellsBatchingPeriod={30}
+          windowSize={7}
+          removeClippedSubviews
           onScroll={(e) => scrollY.setValue(e.nativeEvent.contentOffset.y)}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={q.refetch} tintColor={t.colors.muted} />
