@@ -1,3 +1,4 @@
+import { useIsFocused } from '@react-navigation/native';
 import { useState } from 'react';
 import { useRouter, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
@@ -23,6 +24,7 @@ export default function BudgetScreen() {
   const t = useTheme();
   const router = useRouter();
   const { user } = useAuth();
+  const isFocused = useIsFocused();
   const toast = useToast();
   const { month, label } = useMonth();
   const { data, isLoading, isError, refetch, isRefetching, isPlaceholderData } = useBudget(month);
@@ -80,7 +82,11 @@ export default function BudgetScreen() {
           </Pressable>
         </View>
 
-        {isLoading ? (
+        {isLoading || !isFocused ? (
+          // Blurred tabs skip the pace/donut/depletion charts entirely — that's
+          // the cost that made arrow-tap navigation slow (all four tabs were
+          // re-rendering on every month change). Data keeps fetching live so
+          // this tab is correct on the first frame it regains focus.
           <BudgetSkeleton t={t} />
         ) : isError ? (
           <ErrorCard t={t} onRetry={refetch} retrying={isRefetching} />

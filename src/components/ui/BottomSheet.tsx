@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, View, ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, View, ViewStyle } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -99,12 +99,15 @@ export function BottomSheet({ visible, onClose, children, style }: Props) {
     <Modal visible={visible} transparent animationType="none" onRequestClose={dismiss}>
       {/* Gestures inside an RN Modal need their own root on Android. */}
       <GestureHandlerRootView style={{ flex: 1 }}>
-        {/* iOS needs padding to lift the sheet; Android already resizes the
-            window (softwareKeyboardLayoutMode defaults to "resize"), so adding
-            our own compensation there double-counts and pushes the sheet's top
-            off-screen. */}
+        {/* Lifts the sheet clear of the keyboard so a focused field — and the
+            sheet's pinned action button — stay visible. `padding` on BOTH
+            platforms: Android has been edge-to-edge since Expo SDK 54, so the
+            window no longer resizes for the IME and there is nothing to
+            double-count — the view pads by the keyboard frame it hears about
+            from Keyboard events. The sheet's `flexShrink` lets it give way
+            when the remaining space is tight. */}
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           style={{ flex: 1, justifyContent: 'flex-end' }}
         >
           <Animated.View
