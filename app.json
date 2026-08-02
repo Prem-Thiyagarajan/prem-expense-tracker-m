@@ -40,7 +40,8 @@
       "expo-updates"
     ],
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/aa2e434e-9f0f-4a61-a91b-eac837f4ab19"
     },
     "runtimeVersion": {
       "policy": "appVersion"
@@ -48,6 +49,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "aa2e434e-9f0f-4a61-a91b-eac837f4ab19"
+      }
     }
   }
 }
