@@ -24,7 +24,10 @@ import {
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { AppText, Button, Card, Chip, Screen } from '@/components/ui';
 import { Surface } from '@/components/ui/Surface';
+import { WrappedModal, type WrappedStory } from '@/components/WrappedModal';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useDashboard } from '@/hooks/useDashboard';
+import { categoryVisual } from '@/lib/categoryVisual';
 import { formatINR } from '@/lib/format';
 import { daysInMonth, formatMonthLabel } from '@/lib/month';
 import { useMonth } from '@/state/MonthProvider';
@@ -120,6 +123,17 @@ export default function TrendsScreen() {
   // them carried a category. Keying this off the distribution used to blank the
   // whole screen for a month with real spending but no categories on it.
   const isEmpty = !!data && periodTotal === 0 && categorisedTotal === 0;
+
+  // Wrapped is a month-only feature (a range has no single "story" to tell) and
+  // is cheap to source: the dashboard is already prefetched for every month by
+  // MonthWarmer, so this is a cache read, not a new round trip.
+  const dashboard = useDashboard(month);
+  const [wrappedOpen, setWrappedOpen] = useState(false);
+  const wrappedStories = useMemo(
+    () => (dashboard.data ? buildWrappedStories(dashboard.data, distribution, data?.habitIdentifier ?? [], label) : []),
+    [dashboard.data, distribution, data?.habitIdentifier, label],
+  );
+  const showWrapped = !isRange && !isEmpty && wrappedStories.length > 0;
 
   return (
     <Screen>
@@ -312,11 +326,95 @@ export default function TrendsScreen() {
                 <WeekdayProfile t={t} data={data.transactionHeatmap} />
               </ChartCard>
             )}
+
+            {showWrapped && (
+              <Pressable onPress={() => setWrappedOpen(true)}>
+                <Card background="#1E1B16" borderColor="#1E1B16">
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ flexShrink: 1 }}>
+                      <AppText variant="heading" color="#FFD43B" style={{ fontSize: 13 }}>
+                        {label} Wrapped is ready 🎁
+                      </AppText>
+                      <AppText variant="body" color="#B9B2A6" style={{ fontSize: 11, marginTop: 2 }}>
+                        Your month in {wrappedStories.length} shareable cards
+                      </AppText>
+                    </View>
+                    <View style={{ backgroundColor: '#FFD43B', borderRadius: 99, paddingHorizontal: 13, paddingVertical: 6 }}>
+                      <AppText variant="heading" color="#1E1B16" style={{ fontSize: 11 }}>
+                        Open
+                      </AppText>
+                    </View>
+                  </View>
+                </Card>
+              </Pressable>
+            )}
           </View>
         ) : null}
       </View>
+
+      <WrappedModal
+        visible={wrappedOpen}
+        onClose={() => setWrappedOpen(false)}
+        monthLabel={label}
+        stories={wrappedStories}
+      />
     </Screen>
   );
+}
+
+/**
+ * Builds the Wrapped story sequence from data already loaded on this screen —
+ * dashboard totals + analytics' category distribution and habit identifier —
+ * so opening Wrapped never triggers its own network round trip.
+ */
+function buildWrappedStories(
+  dashboard: { totalSpent: number; percentChangeFromLastMonth: number },
+  distribution: { category: string; total: number; percentage: number; icon_name: string | null }[],
+  habits: { category: string; transaction_count: number; average_spend: number }[],
+  monthLabel: string,
+): WrappedStory[] {
+  const stories: WrappedStory[] = [];
+
+  if (dashboard.totalSpent > 0) {
+    const pct = Math.round(Math.abs(dashboard.percentChangeFromLastMonth));
+    const up = dashboard.percentChangeFromLastMonth >= 0;
+    stories.push({
+      emoji: '💸',
+      circleColor: '#C7F0DB',
+      title: `You spent this much in ${monthLabel}`,
+      big: formatINR(dashboard.totalSpent),
+      sub: `${up ? '▲' : '▼'} ${pct}% vs last month`,
+      shareText: `I spent ${formatINR(dashboard.totalSpent)} in ${monthLabel} — ${up ? 'up' : 'down'} ${pct}% vs last month. #MyMoneyWrapped`,
+    });
+  }
+
+  const topCategory = distribution[0];
+  if (topCategory) {
+    const visual = categoryVisual(topCategory.icon_name, topCategory.category);
+    stories.push({
+      emoji: visual.emoji,
+      circleColor: visual.color,
+      title: `Your top category was ${topCategory.category}`,
+      big: formatINR(topCategory.total),
+      sub: `${Math.round(topCategory.percentage)}% of everything you spent`,
+      shareText: `My top spending category in ${monthLabel} was ${topCategory.category} at ${formatINR(topCategory.total)}. #MyMoneyWrapped`,
+    });
+  }
+
+  const topHabit = [...habits].sort((a, b) => b.transaction_count - a.transaction_count)[0];
+  if (topHabit && topHabit.transaction_count > 1) {
+    const visual = categoryVisual(null, topHabit.category);
+    stories.push({
+      emoji: visual.emoji,
+      circleColor: visual.color,
+      title: 'Your most frequent buy',
+      big: `${topHabit.transaction_count}× ${topHabit.category}`,
+      sub: `avg ${formatINR(topHabit.average_spend)} each time`,
+      shareText: `I bought ${topHabit.category} ${topHabit.transaction_count} times in ${monthLabel}, averaging ${formatINR(topHabit.average_spend)} a pop. #MyMoneyWrapped`,
+    });
+  }
+
+  return stories;
 }
 
 /**

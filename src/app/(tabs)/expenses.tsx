@@ -1,5 +1,6 @@
 import { useIsFocused } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import { Animated, Pressable, RefreshControl, ScrollView, SectionList, View } from 'react-native';
 import ReanimatedSwipeable, {
@@ -54,6 +55,7 @@ export default function ExpensesScreen() {
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const { month, label } = useMonth();
+  const params = useLocalSearchParams<{ categoryId?: string }>();
 
   const q = useTransactions(month);
   const { data: categories } = useCategories();
@@ -74,9 +76,20 @@ export default function ExpensesScreen() {
 
   // Filter state — all applied client-side against the month's full result set.
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
-  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [categoryId, setCategoryId] = useState<number | null>(
+    params.categoryId ? Number(params.categoryId) : null,
+  );
   const [search, setSearch] = useState('');
   const [gridOpen, setGridOpen] = useState(false);
+
+  // Deep-linked from another tab (e.g. tapping a category on Budget) — apply
+  // it as the filter each time it arrives, even if this screen is already
+  // mounted from a previous visit.
+  useEffect(() => {
+    if (!params.categoryId) return;
+    const id = Number(params.categoryId);
+    if (!Number.isNaN(id)) setCategoryId(id);
+  }, [params.categoryId]);
 
   // Delete-with-undo: the pending row is hidden immediately and only actually
   // DELETEd after a 5s grace, so "Undo" fully cancels it (no network call made).
