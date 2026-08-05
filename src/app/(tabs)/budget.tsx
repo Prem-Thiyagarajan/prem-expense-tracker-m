@@ -5,6 +5,7 @@ import { Pressable, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
 import type { CategoryBudget } from '@/api/budget';
+import { BillRadarCard } from '@/components/BillRadarCard';
 import { BudgetCategoryGridSheet } from '@/components/BudgetCategoryGridSheet';
 import { BudgetEditSheet } from '@/components/BudgetEditSheet';
 import { CategoryBadge } from '@/components/CategoryBadge';
@@ -13,6 +14,7 @@ import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { Pager } from '@/components/Pager';
 import { AppText, Button, Card, Screen, useToast } from '@/components/ui';
 import { Surface } from '@/components/ui/Surface';
+import { useBillRadar } from '@/hooks/useBillRadar';
 import { useBudget } from '@/hooks/useBudget';
 import { useCategories } from '@/hooks/useCategories';
 import { formatINR } from '@/lib/format';
@@ -29,6 +31,7 @@ export default function BudgetScreen() {
   const { month, label } = useMonth();
   const { data, isLoading, isError, refetch, isRefetching, isPlaceholderData } = useBudget(month);
   const { data: categories } = useCategories();
+  const billRadar = useBillRadar();
   const [editing, setEditing] = useState(false);
   const [viewingAll, setViewingAll] = useState(false);
 
@@ -129,7 +132,14 @@ export default function BudgetScreen() {
               </View>
               <Pager
                 items={budgeted.map((b) => (
-                  <CategoryBudgetRow key={b.categoryId} t={t} item={b} />
+                  <CategoryBudgetRow
+                    key={b.categoryId}
+                    t={t}
+                    item={b}
+                    onPress={() =>
+                      router.navigate(`/expenses?categoryId=${b.categoryId}` as Href)
+                    }
+                  />
                 ))}
               />
             </View>
@@ -165,6 +175,8 @@ export default function BudgetScreen() {
                 <BudgetDepletionChart t={t} items={budgeted} elapsedDays={elapsed} totalDays={total} />
               </Card>
             )}
+
+            {month === currentMonth() && <BillRadarCard bills={billRadar.data ?? []} />}
 
             <Button label="Edit budgets" variant="neutral" onPress={() => setEditing(true)} />
           </View>
@@ -306,7 +318,15 @@ function HeroPaceCard({
   );
 }
 
-function CategoryBudgetRow({ t, item }: { t: Theme; item: CategoryBudget }) {
+function CategoryBudgetRow({
+  t,
+  item,
+  onPress,
+}: {
+  t: Theme;
+  item: CategoryBudget;
+  onPress: () => void;
+}) {
   const over = item.progress > 100;
   const color = over ? t.semantic.red : item.progress >= 90 ? t.semantic.warn : t.semantic.green;
   const note = over
@@ -314,25 +334,27 @@ function CategoryBudgetRow({ t, item }: { t: Theme; item: CategoryBudget }) {
     : `${formatINR(item.remaining)} left · ${Math.round(item.progress)}% used`;
 
   return (
-    <Card radius={t.radius.card}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: t.spacing.sm }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm, flexShrink: 1 }}>
-          <CategoryBadge iconName={item.icon_name} name={item.categoryName} size={32} />
-          <AppText variant="heading" style={{ fontSize: 13 }} numberOfLines={1}>
-            {item.categoryName}
+    <Pressable onPress={onPress}>
+      <Card radius={t.radius.card}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: t.spacing.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm, flexShrink: 1 }}>
+            <CategoryBadge iconName={item.icon_name} name={item.categoryName} size={32} />
+            <AppText variant="heading" style={{ fontSize: 13 }} numberOfLines={1}>
+              {item.categoryName}
+            </AppText>
+          </View>
+          <AppText variant="money" style={{ fontSize: 13 }}>
+            {formatINR(item.spent)} <AppText variant="label">/ {formatINR(item.budget)}</AppText>
           </AppText>
         </View>
-        <AppText variant="money" style={{ fontSize: 13 }}>
-          {formatINR(item.spent)} <AppText variant="label">/ {formatINR(item.budget)}</AppText>
+        <View style={{ marginTop: t.spacing.sm }}>
+          <ProgressBar t={t} pct={item.progress} color={color} height={10} />
+        </View>
+        <AppText variant="label" style={{ marginTop: 5, color, textTransform: 'none', letterSpacing: 0 }}>
+          {note}
         </AppText>
-      </View>
-      <View style={{ marginTop: t.spacing.sm }}>
-        <ProgressBar t={t} pct={item.progress} color={color} height={10} />
-      </View>
-      <AppText variant="label" style={{ marginTop: 5, color, textTransform: 'none', letterSpacing: 0 }}>
-        {note}
-      </AppText>
-    </Card>
+      </Card>
+    </Pressable>
   );
 }
 
