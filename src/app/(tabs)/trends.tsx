@@ -11,6 +11,7 @@ import {
   type VelocityPoint,
 } from '@/api/analytics';
 import { useAuth } from '@/auth/AuthProvider';
+import { AlertBell } from '@/components/AlertBell';
 import {
   CategoryBars,
   ChartCard,
@@ -157,18 +158,21 @@ export default function TrendsScreen() {
 
           <MonthSwitcher />
 
-          <Pressable onPress={() => router.push('/profile' as Href)} hitSlop={6}>
-            <Surface
-              backgroundColor={t.candy.pink}
-              offset={t.shadowOffset.chip}
-              radius={999}
-              style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <AppText variant="heading" color={t.candyText}>
-                {initial}
-              </AppText>
-            </Surface>
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+            <AlertBell />
+            <Pressable onPress={() => router.push('/profile' as Href)} hitSlop={6}>
+              <Surface
+                backgroundColor={t.candy.pink}
+                offset={t.shadowOffset.chip}
+                radius={999}
+                style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <AppText variant="heading" color={t.candyText}>
+                  {initial}
+                </AppText>
+              </Surface>
+            </Pressable>
+          </View>
         </View>
 
         {/* Period selector. The first chip drills into the switcher's month;

@@ -5,6 +5,7 @@ import { Pressable, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
 import type { CategoryBudget } from '@/api/budget';
+import { AlertBell } from '@/components/AlertBell';
 import { BillRadarCard } from '@/components/BillRadarCard';
 import { BudgetCategoryGridSheet } from '@/components/BudgetCategoryGridSheet';
 import { BudgetEditSheet } from '@/components/BudgetEditSheet';
@@ -71,18 +72,21 @@ export default function BudgetScreen() {
 
           <MonthSwitcher />
 
-          <Pressable onPress={() => router.push('/profile' as Href)} hitSlop={6}>
-            <Surface
-              backgroundColor={t.candy.pink}
-              offset={t.shadowOffset.chip}
-              radius={999}
-              style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <AppText variant="heading" color={t.candyText}>
-                {initial}
-              </AppText>
-            </Surface>
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+            <AlertBell />
+            <Pressable onPress={() => router.push('/profile' as Href)} hitSlop={6}>
+              <Surface
+                backgroundColor={t.candy.pink}
+                offset={t.shadowOffset.chip}
+                radius={999}
+                style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <AppText variant="heading" color={t.candyText}>
+                  {initial}
+                </AppText>
+              </Surface>
+            </Pressable>
+          </View>
         </View>
 
         {isLoading || !isFocused ? (
