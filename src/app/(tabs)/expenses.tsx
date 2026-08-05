@@ -1,6 +1,6 @@
 import { useIsFocused } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import { Animated, Pressable, RefreshControl, ScrollView, SectionList, View } from 'react-native';
 import ReanimatedSwipeable, {
@@ -12,6 +12,8 @@ import type { Account } from '@/api/accounts';
 import type { Category } from '@/api/categories';
 import { invalidateTransactionDerived } from '@/api/queryClient';
 import { deleteTransaction, type Transaction, type TxnType } from '@/api/transactions';
+import { useAuth } from '@/auth/AuthProvider';
+import { AlertBell } from '@/components/AlertBell';
 import { useAddSheet } from '@/components/AddSheetHost';
 import { CategoryGridSheet } from '@/components/CategoryGridSheet';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
@@ -52,10 +54,14 @@ function buildSections(txns: Transaction[]): Section[] {
 
 export default function ExpensesScreen() {
   const t = useTheme();
+  const router = useRouter();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const { month, label } = useMonth();
   const params = useLocalSearchParams<{ categoryId?: string }>();
+
+  const initial = user?.username?.[0]?.toUpperCase() ?? '?';
 
   const q = useTransactions(month);
   const { data: categories } = useCategories();
@@ -228,26 +234,41 @@ export default function ExpensesScreen() {
       {/* Fixed header: title · month · count · search · filter chips. */}
       <View style={{ paddingHorizontal: t.spacing.lg, gap: t.spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
-            {/* Every tab leads with its own tilted sticker tile — 💸 Home,
-                🧾 Expenses, 🎯 Budget, 📊 Trends. */}
-            <Surface
-              backgroundColor={t.candy.mint}
-              offset={t.shadowOffset.chip}
-              radius={t.radius.chip}
-              style={{
-                width: 40,
-                height: 40,
-                alignItems: 'center',
-                justifyContent: 'center',
-                transform: [{ rotate: '-6deg' }],
-              }}
-            >
-              <AppText style={{ fontSize: 20 }}>🧾</AppText>
-            </Surface>
-            <AppText variant="title">Expenses</AppText>
-          </View>
+          {/* Every tab leads with its own tilted sticker tile — 💸 Home,
+              🧾 Expenses, 🎯 Budget, 📊 Trends — and no page-name label, to
+              stay uniform with the other three tabs' headers. */}
+          <Surface
+            backgroundColor={t.candy.mint}
+            offset={t.shadowOffset.chip}
+            radius={t.radius.chip}
+            style={{
+              width: 40,
+              height: 40,
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: [{ rotate: '-6deg' }],
+            }}
+          >
+            <AppText style={{ fontSize: 20 }}>🧾</AppText>
+          </Surface>
+
           <MonthSwitcher />
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+            <AlertBell />
+            <Pressable onPress={() => router.push('/profile' as Href)} hitSlop={6}>
+              <Surface
+                backgroundColor={t.candy.pink}
+                offset={t.shadowOffset.chip}
+                radius={999}
+                style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <AppText variant="heading" color={t.candyText}>
+                  {initial}
+                </AppText>
+              </Surface>
+            </Pressable>
+          </View>
         </View>
         <AppText variant="label">
           {filtersActive ? `${filtered.length} of ${total}` : total} {total === 1 ? 'transaction' : 'transactions'} · {label}

@@ -3,6 +3,7 @@ import { useRouter, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
+import { AlertBell } from '@/components/AlertBell';
 import { CategoryDonut, SpendTrend } from '@/components/charts';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { AppText, Button, Card, Screen } from '@/components/ui';
@@ -54,20 +55,23 @@ export default function HomeScreen() {
 
           <MonthSwitcher />
 
-          {/* Cast: expo-router's generated route types pick up profile.tsx once
-              the dev server regenerates them; the literal is valid at runtime. */}
-          <Pressable onPress={() => router.push('/profile' as Href)} hitSlop={6}>
-            <Surface
-              backgroundColor={t.candy.pink}
-              offset={t.shadowOffset.chip}
-              radius={999}
-              style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <AppText variant="heading" color={t.candyText}>
-                {initial}
-              </AppText>
-            </Surface>
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+            <AlertBell />
+            {/* Cast: expo-router's generated route types pick up profile.tsx once
+                the dev server regenerates them; the literal is valid at runtime. */}
+            <Pressable onPress={() => router.push('/profile' as Href)} hitSlop={6}>
+              <Surface
+                backgroundColor={t.candy.pink}
+                offset={t.shadowOffset.chip}
+                radius={999}
+                style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <AppText variant="heading" color={t.candyText}>
+                  {initial}
+                </AppText>
+              </Surface>
+            </Pressable>
+          </View>
         </View>
 
         {isLoading || !isFocused ? (
