@@ -132,6 +132,9 @@ export default function ProfileScreen() {
               emoji="🛟"
               label="Security question"
               last
+              trailing={
+                <SecurityQuestionBadge t={t} isSet={user?.has_security_question ?? false} />
+              }
               onPress={() => setQuestionOpen(true)}
             />
           </Card>
@@ -207,12 +210,15 @@ function DrillRow({
   emoji,
   label,
   last,
+  trailing,
   onPress,
 }: {
   t: Theme;
   emoji: string;
   label: string;
   last?: boolean;
+  /** Optional status pill rendered between the label and the chevron. */
+  trailing?: React.ReactNode;
   onPress: () => void;
 }) {
   return (
@@ -232,8 +238,33 @@ function DrillRow({
       <AppText variant="bodySemi" style={{ flex: 1 }}>
         {label}
       </AppText>
+      {trailing}
       <ChevronRowIcon size={18} color={t.colors.faint} />
     </Pressable>
+  );
+}
+
+/** "Set ✓" / "Not set" pill — the only way to know your recovery answer is in place. */
+function SecurityQuestionBadge({ t, isSet }: { t: Theme; isSet: boolean }) {
+  return (
+    <View
+      style={{
+        borderRadius: t.radius.pill,
+        borderWidth: t.border.row,
+        borderColor: t.colors.line,
+        backgroundColor: isSet ? t.candy.mint : t.colors.hair,
+        paddingHorizontal: t.spacing.sm,
+        paddingVertical: 3,
+      }}
+    >
+      <AppText
+        variant="label"
+        color={isSet ? t.candyText : t.colors.muted}
+        style={{ fontSize: 9, letterSpacing: 0 }}
+      >
+        {isSet ? 'Set ✓' : 'Not set'}
+      </AppText>
+    </View>
   );
 }
 
