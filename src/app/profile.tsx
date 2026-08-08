@@ -111,8 +111,14 @@ export default function ProfileScreen() {
               t={t}
               emoji="🔖"
               label="Tags"
-              last
               onPress={() => router.push('/manage/tags' as Href)}
+            />
+            <DrillRow
+              t={t}
+              emoji="📡"
+              label="Subscriptions"
+              last
+              onPress={() => router.push('/manage/subscriptions' as Href)}
             />
           </Card>
         </Section>

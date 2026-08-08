@@ -121,12 +121,34 @@ export function CategoryEditorSheet({ visible, category, onClose }: Props) {
                     borderRadius: 999,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderWidth: selected ? t.border.card : t.border.row,
-                    borderColor: selected ? t.colors.ink : t.colors.line,
+                    borderWidth: t.border.row,
+                    borderColor: t.colors.line,
                     backgroundColor: choice.color,
                   }}
                 >
                   <AppText style={{ fontSize: 20 }}>{choice.emoji}</AppText>
+                  {selected && (
+                    <View
+                      pointerEvents="none"
+                      style={{
+                        position: 'absolute',
+                        bottom: -2,
+                        right: -2,
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        backgroundColor: t.semantic.green,
+                        borderWidth: 1.5,
+                        borderColor: t.colors.bg,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <AppText style={{ fontSize: 10, fontWeight: '700', color: '#FFFFFF', lineHeight: 12 }}>
+                        ✓
+                      </AppText>
+                    </View>
+                  )}
                 </Pressable>
               );
             })}

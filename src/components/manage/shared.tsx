@@ -128,7 +128,7 @@ export function ManageEmpty({ emoji, text }: { emoji: string; text: string }) {
   const t = useTheme();
   return (
     <View style={{ alignItems: 'center', paddingVertical: t.spacing.xxl, gap: t.spacing.sm }}>
-      <AppText style={{ fontSize: 32 }}>{emoji}</AppText>
+      <AppText style={{ fontSize: 32, lineHeight: 38 }}>{emoji}</AppText>
       <AppText variant="bodyMedium" tone="muted" style={{ textAlign: 'center' }}>
         {text}
       </AppText>
