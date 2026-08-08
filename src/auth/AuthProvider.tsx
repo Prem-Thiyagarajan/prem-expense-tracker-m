@@ -20,6 +20,10 @@ type AuthContextValue = {
   signIn: (identifier: string, password: string, rememberMe: boolean) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Re-fetches `/users/me` — call after a write that changes something on
+      the user object itself (e.g. setting the security question), since
+      `user` is plain state here, not a query cache invalidation can refresh. */
+  refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -128,9 +132,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Backend returns no token on register — the user logs in afterward.
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const me = await getMe();
+    if (mounted.current) setUser(me);
+  }, []);
+
   const value = useMemo(
-    () => ({ status, user, signIn, register, signOut }),
-    [status, user, signIn, register, signOut],
+    () => ({ status, user, signIn, register, signOut, refreshUser }),
+    [status, user, signIn, register, signOut, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

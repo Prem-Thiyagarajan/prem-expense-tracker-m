@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { useAuth } from '@/auth/AuthProvider';
 import { AppText, Button, TextField, useToast } from '@/components/ui';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PressableSurface } from '@/components/ui/Surface';
@@ -43,6 +44,7 @@ const CUSTOM = '__custom__';
 export function SecurityQuestionSheet({ visible, onClose }: Props) {
   const t = useTheme();
   const toast = useToast();
+  const { refreshUser } = useAuth();
   const save = useSetSecurityQuestion();
 
   const [choice, setChoice] = useState<string>(PRESETS[0]);
@@ -73,6 +75,7 @@ export function SecurityQuestionSheet({ visible, onClose }: Props) {
     setError(null);
     try {
       await save.mutateAsync({ current_password: password, question, answer });
+      await refreshUser();
       toast.show('Security question saved ✓');
       onClose();
     } catch (e) {

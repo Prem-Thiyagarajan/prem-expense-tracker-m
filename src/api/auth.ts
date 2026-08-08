@@ -1,7 +1,12 @@
 import { api } from './client';
 import { clearToken, setToken } from './tokenStore';
 
-export type AuthUser = { id: number; username: string; email: string };
+export type AuthUser = {
+  id: number;
+  username: string;
+  email: string;
+  has_security_question: boolean;
+};
 export type LoginInput = { identifier: string; password: string; remember_me: boolean };
 export type RegisterInput = { username: string; email: string; password: string };
 
