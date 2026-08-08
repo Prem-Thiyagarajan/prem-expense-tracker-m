@@ -15,6 +15,12 @@ type Props = {
   value: string;
   onClose: () => void;
   onSelect: (day: string) => void;
+  /**
+   * Lets future days/months/years be picked. Off by default — most uses are
+   * transaction dates, which can't be in the future — but a subscription's
+   * due date legitimately can be (e.g. later this month, or next month).
+   */
+  allowFuture?: boolean;
 };
 
 const WEEKDAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -22,9 +28,9 @@ const WEEKDAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 /**
  * Calendar day-picker shown in the bottom sheet. Month arrows page the grid; the
  * "Month Year" title flips to a month/year grid so you can jump directly instead
- * of stepping. Future days (and future months) are disabled.
+ * of stepping. Future days (and future months) are disabled unless `allowFuture`.
  */
-export function DatePickerSheet({ visible, value, onClose, onSelect }: Props) {
+export function DatePickerSheet({ visible, value, onClose, onSelect, allowFuture = false }: Props) {
   const t = useTheme();
   const today = todayKey();
   const [view, setView] = useState(value.slice(0, 7)); // 'YYYY-MM' on screen
@@ -40,7 +46,7 @@ export function DatePickerSheet({ visible, value, onClose, onSelect }: Props) {
 
   const now = new Date();
   const curYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const canGoNextMonth = view < curYM;
+  const canGoNextMonth = allowFuture || view < curYM;
   const [vy, vm] = view.split('-').map(Number);
 
   return (
@@ -82,6 +88,7 @@ export function DatePickerSheet({ visible, value, onClose, onSelect }: Props) {
             view={view}
             value={value}
             today={today}
+            allowFuture={allowFuture}
             onPick={(day) => onSelect(day)}
           />
         ) : (
@@ -90,6 +97,7 @@ export function DatePickerSheet({ visible, value, onClose, onSelect }: Props) {
             year={vy}
             selectedMonth={vm}
             curYM={curYM}
+            allowFuture={allowFuture}
             onPickMonth={(m) => {
               setView(`${vy}-${String(m).padStart(2, '0')}`);
               setMode('days');
@@ -108,12 +116,14 @@ function DayGrid({
   view,
   value,
   today,
+  allowFuture,
   onPick,
 }: {
   t: Theme;
   view: string;
   value: string;
   today: string;
+  allowFuture: boolean;
   onPick: (day: string) => void;
 }) {
   const [y, m] = view.split('-').map(Number);
@@ -142,7 +152,7 @@ function DayGrid({
         {cells.map((day, i) => {
           if (day == null) return <View key={`b${i}`} style={{ width: `${100 / 7}%`, height: 40 }} />;
           const key = `${view}-${String(day).padStart(2, '0')}`;
-          const disabled = key > today;
+          const disabled = !allowFuture && key > today;
           const selected = key === value;
           const isToday = key === today;
           return (
@@ -182,6 +192,7 @@ function MonthGrid({
   year,
   selectedMonth,
   curYM,
+  allowFuture,
   onPickMonth,
   onYear,
 }: {
@@ -189,11 +200,13 @@ function MonthGrid({
   year: number;
   selectedMonth: number;
   curYM: string;
+  allowFuture: boolean;
   onPickMonth: (m: number) => void;
   onYear: (dir: 1 | -1) => void;
 }) {
   const curYear = Number(curYM.slice(0, 4));
   const curMonth = Number(curYM.slice(5, 7));
+  const canGoNextYear = allowFuture || year < curYear;
   return (
     <View style={{ gap: t.spacing.md }}>
       <View
@@ -205,15 +218,15 @@ function MonthGrid({
         <AppText variant="heading" style={{ fontSize: 18, minWidth: 68, textAlign: 'center' }}>
           {year}
         </AppText>
-        <Pressable onPress={() => (year < curYear ? onYear(1) : null)} hitSlop={10} disabled={year >= curYear}>
-          <ChevronRightIcon size={20} color={year < curYear ? t.colors.ink : t.colors.faint} />
+        <Pressable onPress={() => (canGoNextYear ? onYear(1) : null)} hitSlop={10} disabled={!canGoNextYear}>
+          <ChevronRightIcon size={20} color={canGoNextYear ? t.colors.ink : t.colors.faint} />
         </Pressable>
       </View>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm }}>
         {MONTHS.map((label, i) => {
           const m = i + 1;
-          const disabled = year > curYear || (year === curYear && m > curMonth);
+          const disabled = !allowFuture && (year > curYear || (year === curYear && m > curMonth));
           const selected = m === selectedMonth;
           return (
             <PressableSurface
