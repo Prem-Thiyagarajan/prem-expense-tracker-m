@@ -30,7 +30,10 @@ export type SubscriptionCreate = {
 };
 
 export type SubscriptionUpdate = Partial<
-  Pick<SubscriptionCreate, 'name' | 'description' | 'amount' | 'interval'>
+  Pick<
+    SubscriptionCreate,
+    'name' | 'description' | 'amount' | 'interval' | 'first_due_date' | 'last_paid_date'
+  >
 > & { is_active?: boolean };
 
 /** GET /subscriptions — active subscriptions by default. */
@@ -67,5 +70,11 @@ export async function markSubscriptionPaid(id: number, paidForDate?: string): Pr
   const { data } = await api.put<Subscription>(`/subscriptions/${id}/pay`, {
     paid_for_date: paidForDate ?? null,
   });
+  return data;
+}
+
+/** PUT /subscriptions/{id}/unpay — undoes the most recent "mark as paid". */
+export async function unmarkSubscriptionPaid(id: number): Promise<Subscription> {
+  const { data } = await api.put<Subscription>(`/subscriptions/${id}/unpay`);
   return data;
 }

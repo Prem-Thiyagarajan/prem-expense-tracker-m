@@ -26,10 +26,9 @@ const INTERVALS: { value: SubscriptionInterval; label: string }[] = [
 ];
 
 /**
- * Create/edit a subscription. `first_due_date` and `last_paid_date` are only
- * asked for on create — every future due date after that is computed from
- * them (CONVENTIONS: never re-typed), so editing only touches name/amount/
- * description/interval.
+ * Create/edit a subscription. `first_due_date`/`last_paid_date` seed the
+ * recurrence anchor on create, but stay editable afterward too — for
+ * correcting a mistyped date, which reshapes every future computed due date.
  */
 export function SubscriptionEditorSheet({ visible, subscription, onClose }: Props) {
   const t = useTheme();
@@ -70,7 +69,14 @@ export function SubscriptionEditorSheet({ visible, subscription, onClose }: Prop
       if (editing) {
         await update.mutateAsync({
           id: subscription.id,
-          input: { name: trimmedName, description: description.trim() || null, amount: parsedAmount, interval },
+          input: {
+            name: trimmedName,
+            description: description.trim() || null,
+            amount: parsedAmount,
+            interval,
+            first_due_date: firstDueDate,
+            last_paid_date: lastPaidDate,
+          },
         });
         toast.show('Subscription updated ✓');
       } else {
@@ -152,21 +158,17 @@ export function SubscriptionEditorSheet({ visible, subscription, onClose }: Prop
             </View>
           </View>
 
-          {!editing && (
-            <>
-              <DateField
-                label="This month's payment date"
-                value={firstDueDate}
-                onPress={() => setPickerField('first')}
-              />
-              <DateField
-                label="Last month's payment date (optional)"
-                value={lastPaidDate}
-                onPress={() => setPickerField('last')}
-                onClear={lastPaidDate ? () => setLastPaidDate(null) : undefined}
-              />
-            </>
-          )}
+          <DateField
+            label={editing ? 'First due date' : "This month's payment date"}
+            value={firstDueDate}
+            onPress={() => setPickerField('first')}
+          />
+          <DateField
+            label={editing ? 'Last confirmed paid (optional)' : "Last month's payment date (optional)"}
+            value={lastPaidDate}
+            onPress={() => setPickerField('last')}
+            onClear={lastPaidDate ? () => setLastPaidDate(null) : undefined}
+          />
 
           {error ? (
             <AppText variant="body" color={t.semantic.red} style={{ fontSize: 12 }}>
