@@ -11,6 +11,7 @@ import {
   type VelocityPoint,
 } from '@/api/analytics';
 import { useAuth } from '@/auth/AuthProvider';
+import { AssistantButton } from '@/components/assistant/AssistantButton';
 import { AlertBell } from '@/components/AlertBell';
 import {
   CategoryBars,
@@ -159,6 +160,7 @@ export default function TrendsScreen() {
           <MonthSwitcher />
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+            <AssistantButton />
             <AlertBell />
             <Pressable onPress={() => router.push('/profile' as Href)} hitSlop={6}>
               <Surface

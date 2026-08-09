@@ -3,6 +3,7 @@ import { useRouter, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
+import { AssistantButton } from '@/components/assistant/AssistantButton';
 import { AlertBell } from '@/components/AlertBell';
 import { CategoryDonut, SpendTrend } from '@/components/charts';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
@@ -38,35 +39,25 @@ export default function HomeScreen() {
       <View style={{ gap: t.spacing.lg }}>
         {/* Header: logo tile · month control · avatar → profile */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* The assistant's primary entry point. This slot held a decorative
-              logo tile; the header's other three items already leave only ~14px
-              of slack on a 360px screen, so a fifth element would squeeze the
-              month switcher. A functional button earns the space better than an
-              ornament, and the launcher icon still carries the branding. */}
-          <Pressable
-            onPress={() => router.push(`/assistant?month=${month}` as Href)}
-            hitSlop={6}
-            accessibilityLabel="Ask the assistant"
+          <Surface
+            backgroundColor={t.candy.yellow}
+            offset={t.shadowOffset.chip}
+            radius={t.radius.chip}
+            style={{
+              width: 40,
+              height: 40,
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: [{ rotate: '-6deg' }],
+            }}
           >
-            <Surface
-              backgroundColor={t.candy.lilac}
-              offset={t.shadowOffset.chip}
-              radius={t.radius.chip}
-              style={{
-                width: 40,
-                height: 40,
-                alignItems: 'center',
-                justifyContent: 'center',
-                transform: [{ rotate: '-6deg' }],
-              }}
-            >
-              <AppText style={{ fontSize: 18 }}>✨</AppText>
-            </Surface>
-          </Pressable>
+            <AppText style={{ fontSize: 20 }}>💸</AppText>
+          </Surface>
 
           <MonthSwitcher />
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+            <AssistantButton />
             <AlertBell />
             {/* Cast: expo-router's generated route types pick up profile.tsx once
                 the dev server regenerates them; the literal is valid at runtime. */}
