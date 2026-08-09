@@ -43,7 +43,8 @@
         {
           "microphonePermission": "Allow ExpenseTracker to use the microphone so you can ask the assistant by voice."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "updates": {
       "fallbackToCacheTimeout": 0,
