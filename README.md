@@ -1,9 +1,9 @@
-# Pocket — Expense Tracker (Mobile)
+# Expense Tracker (Mobile)
 
 Native iOS + Android client for the **Prem Expense Tracker**, built with Expo. It is a new mobile
 frontend for the existing FastAPI + PostgreSQL backend (REST API at `/api/v1`) — no backend rewrite.
 
-Design language: **"Pocket"** — cream background, 2px ink borders, hard offset shadows, candy-colored
+Design language: cream background, 2px ink borders, hard offset shadows, candy-colored
 cards, Archivo Black numerals, in light and dark themes.
 
 ## Tech stack
@@ -12,7 +12,7 @@ cards, Archivo Black numerals, in light and dark themes.
 - **expo-router** — file-based navigation
 - **@tanstack/react-query** — server state
 - **expo-secure-store** — JWT storage (Keychain/Keystore)
-- **react-native-svg** + **react-native-reanimated** — custom Pocket-styled charts & animations
+- **react-native-svg** + **react-native-reanimated** — custom Expense Tracker-styled charts & animations
 - **@expo-google-fonts** — Bricolage Grotesque, Archivo, Archivo Black, JetBrains Mono
 
 ## Getting started
@@ -32,7 +32,7 @@ FastAPI backend or the production API. On a physical device, use your machine's 
 src/
   app/            expo-router routes ((tabs) group + root layout)
   components/     UI primitives (ui/), tab bar, icons, sheets
-  theme/          Pocket design tokens + ThemeProvider (light/dark)
+  theme/          Expense Tracker design tokens + ThemeProvider (light/dark)
   api/            axios client, react-query client, secure token store
   lib/            env/config
 ```

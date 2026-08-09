@@ -54,7 +54,7 @@ function splitStyle(style: StyleProp<ViewStyle>): { outer: ViewStyle; panel: Vie
 }
 
 /**
- * The core "Pocket" primitive: an opaque panel with a 2px border and a hard
+ * The core Expense Tracker primitive: an opaque panel with a 2px border and a hard
  * offset shadow rendered as a translated solid layer behind it (crisp on both
  * iOS and Android, unlike native elevation).
  */

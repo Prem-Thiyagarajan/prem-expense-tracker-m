@@ -1,5 +1,5 @@
 /**
- * "Pocket" design tokens — transcribed from the design handoff (README.md §Design Tokens).
+ * Expense Tracker design tokens — transcribed from the design handoff (README.md §Design Tokens).
  * Playful sticker aesthetic: cream bg, 2px ink borders, hard offset shadows, candy cards.
  */
 

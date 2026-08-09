@@ -4,7 +4,7 @@ import type { LayoutChangeEvent } from 'react-native';
 /**
  * Measures a chart container's width via onLayout so SVGs can render in crisp
  * real pixels instead of relying on viewBox scaling (which stretches strokes).
- * Shared primitive for all "Pocket" charts — reused by Trends (M5).
+ * Shared primitive for all Expense Tracker charts — reused by Trends (M5).
  *
  * Usage: `const { width, onLayout } = useChartWidth();` then spread onLayout on
  * the wrapping <View> and only draw once `width > 0`.

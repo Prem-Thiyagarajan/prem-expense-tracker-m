@@ -11,7 +11,7 @@ type Props = TextInputProps & {
   password?: boolean;
 };
 
-/** Pocket-styled text input: 2px ink border, cream/card fill, label + error. */
+/** Expense Tracker-styled text input: 2px ink border, cream/card fill, label + error. */
 export function TextField({ label, error, password, style, ...rest }: Props) {
   const t = useTheme();
   const [focused, setFocused] = useState(false);

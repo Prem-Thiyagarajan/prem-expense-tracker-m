@@ -18,7 +18,7 @@ import {
 } from '@expo-google-fonts/jetbrains-mono';
 
 /**
- * Loads every Pocket font. The keys here MUST match `fontFamily` in tokens.ts.
+ * Loads every Expense Tracker font. The keys here MUST match `fontFamily` in tokens.ts.
  * Returns [loaded, error] from expo-font's useFonts.
  */
 export function useAppFonts() {
