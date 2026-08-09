@@ -13,14 +13,15 @@ import {
 } from '@/components/manage/shared';
 import { SubscriptionEditorSheet } from '@/components/manage/SubscriptionEditorSheet';
 import { AppText, Screen, useToast } from '@/components/ui';
-import { PressableSurface, Surface } from '@/components/ui/Surface';
+import { Surface } from '@/components/ui/Surface';
 import {
   useDeleteSubscription,
   useMarkSubscriptionPaid,
   useSubscriptions,
+  useUnmarkSubscriptionPaid,
 } from '@/hooks/useSubscriptions';
 import { apiErrorMessage } from '@/lib/apiError';
-import { formatINR, formatShortDate } from '@/lib/format';
+import { formatINR, formatShortDate, todayKey } from '@/lib/format';
 import { useTheme, type Theme } from '@/theme';
 
 const INTERVAL_LABEL: Record<string, string> = {
@@ -38,6 +39,7 @@ export default function ManageSubscriptionsScreen() {
   const { data, isLoading, isError } = useSubscriptions();
   const remove = useDeleteSubscription();
   const markPaid = useMarkSubscriptionPaid();
+  const unmarkPaid = useUnmarkSubscriptionPaid();
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Subscription | null>(null);
@@ -64,13 +66,24 @@ export default function ManageSubscriptionsScreen() {
     }
   };
 
-  const onMarkPaid = async (sub: Subscription) => {
-    try {
-      await markPaid.mutateAsync({ id: sub.id, paidForDate: sub.overdue_due_date ?? sub.upcoming_due_date });
-      toast.show(`${sub.name} marked as paid ✓`);
-    } catch (e) {
-      toast.show(apiErrorMessage(e, 'Could not update — try again'));
-    }
+  // Fire-and-forget rather than awaiting: the button already reflects the
+  // change instantly via the mutation's optimistic update, so the toast
+  // should match that — not wait on the real network round trip behind it.
+  // The mutation's own onError already rolls the cache back; this callback
+  // just also tells the user it didn't stick.
+  const onMarkPaid = (sub: Subscription) => {
+    markPaid.mutate(
+      { id: sub.id, paidForDate: sub.overdue_due_date ?? sub.upcoming_due_date },
+      { onError: (e) => toast.show(apiErrorMessage(e, 'Could not update — try again')) },
+    );
+    toast.show(`${sub.name} marked as paid ✓`);
+  };
+
+  const onUnmarkPaid = (sub: Subscription) => {
+    unmarkPaid.mutate(sub.id, {
+      onError: (e) => toast.show(apiErrorMessage(e, 'Could not update — try again')),
+    });
+    toast.show(`${sub.name} marked as unpaid`);
   };
 
   const sorted = [...(data ?? [])].sort((a, b) => a.name.localeCompare(b.name));
@@ -100,7 +113,8 @@ export default function ManageSubscriptionsScreen() {
                 onEdit={() => openEdit(s)}
                 onDelete={() => setPendingDelete(s)}
                 onMarkPaid={() => onMarkPaid(s)}
-                marking={markPaid.isPending}
+                onUnmarkPaid={() => onUnmarkPaid(s)}
+                marking={markPaid.isPending || unmarkPaid.isPending}
               />
             ))}
           </View>
@@ -126,6 +140,7 @@ function SubscriptionRow({
   onEdit,
   onDelete,
   onMarkPaid,
+  onUnmarkPaid,
   marking,
 }: {
   t: Theme;
@@ -133,19 +148,23 @@ function SubscriptionRow({
   onEdit: () => void;
   onDelete: () => void;
   onMarkPaid: () => void;
+  onUnmarkPaid: () => void;
   marking: boolean;
 }) {
   const isOverdue = sub.overdue_due_date != null;
   const dueDate = sub.overdue_due_date ?? sub.upcoming_due_date;
+  // "Paid" means a cycle has actually been confirmed AND nothing's due right
+  // now — gated on `last_paid_date` itself, not just date math, so a
+  // never-paid subscription that simply isn't due yet doesn't get mislabeled
+  // "paid" the way an earlier version of this screen did.
+  const isPaid = !isOverdue && sub.last_paid_date != null && sub.upcoming_due_date > todayKey();
 
   return (
-    <PressableSurface
-      onPress={onEdit}
-      radius={t.radius.chip}
-      offset={t.shadowOffset.chip}
-      style={{ padding: t.spacing.md, gap: t.spacing.sm }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
+    <Surface radius={t.radius.chip} offset={t.shadowOffset.chip} style={{ padding: t.spacing.md, gap: t.spacing.sm }}>
+      <Pressable
+        onPress={onEdit}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}
+      >
         <EmojiTile emoji="📡" color={isOverdue ? t.candy.coral : t.candy.mint} />
         <View style={{ flex: 1 }}>
           <AppText variant="bodySemi" numberOfLines={1}>
@@ -158,7 +177,7 @@ function SubscriptionRow({
         <Pressable onPress={onDelete} hitSlop={10} style={{ padding: 4 }}>
           <TrashIcon size={20} color={t.colors.muted} />
         </Pressable>
-      </View>
+      </Pressable>
 
       <View
         style={{
@@ -177,20 +196,35 @@ function SubscriptionRow({
         >
           {isOverdue ? 'Overdue since' : 'Due'} {formatShortDate(dueDate)}
         </AppText>
-        <Pressable onPress={onMarkPaid} disabled={marking} hitSlop={6}>
-          <Surface
-            backgroundColor={t.candy.mint}
-            offset={0}
-            borderWidth={t.border.row}
-            radius={t.radius.pill}
-            style={{ paddingHorizontal: t.spacing.md, paddingVertical: 6 }}
-          >
-            <AppText variant="subheading" color={t.candyText} style={{ fontSize: 11 }}>
-              Mark as paid
-            </AppText>
-          </Surface>
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+          <Pressable onPress={onUnmarkPaid} disabled={marking || !isPaid} hitSlop={6}>
+            <Surface
+              backgroundColor={isPaid ? t.semantic.red : t.colors.hair}
+              offset={0}
+              borderWidth={t.border.row}
+              radius={t.radius.pill}
+              style={{ paddingHorizontal: t.spacing.md, paddingVertical: 6 }}
+            >
+              <AppText variant="subheading" color={isPaid ? '#FFFFFF' : t.colors.muted} style={{ fontSize: 11 }}>
+                Mark as unpaid
+              </AppText>
+            </Surface>
+          </Pressable>
+          <Pressable onPress={onMarkPaid} disabled={marking || isPaid} hitSlop={6}>
+            <Surface
+              backgroundColor={isPaid ? t.colors.hair : t.candy.mint}
+              offset={0}
+              borderWidth={t.border.row}
+              radius={t.radius.pill}
+              style={{ paddingHorizontal: t.spacing.md, paddingVertical: 6 }}
+            >
+              <AppText variant="subheading" color={isPaid ? t.colors.muted : t.candyText} style={{ fontSize: 11 }}>
+                Mark as paid
+              </AppText>
+            </Surface>
+          </Pressable>
+        </View>
       </View>
-    </PressableSurface>
+    </Surface>
   );
 }

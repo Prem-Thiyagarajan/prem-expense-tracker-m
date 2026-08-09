@@ -1,21 +1,18 @@
 import { View } from 'react-native';
 
-import type { IncomingBill } from '@/lib/billRadar';
-import { formatINR } from '@/lib/format';
-import { MONTHS } from '@/lib/month';
+import type { BillRadarItem } from '@/hooks/useBillRadar';
+import { formatINR, formatShortDate } from '@/lib/format';
 import { useTheme } from '@/theme';
 import { AppText, Card } from './ui';
 
 /**
- * "Incoming" recurring bills for the rest of the live month — Netflix,
- * electricity, etc. — predicted client-side from transaction history (see
- * `useBillRadar`). Renders nothing when there's nothing upcoming.
+ * "Incoming" bills for the rest of the live month, sourced from Manage →
+ * Subscriptions (see `useBillRadar`). Renders nothing when there's nothing
+ * due or overdue.
  */
-export function BillRadarCard({ bills }: { bills: IncomingBill[] }) {
+export function BillRadarCard({ bills }: { bills: BillRadarItem[] }) {
   const t = useTheme();
   if (bills.length === 0) return null;
-
-  const monthShort = MONTHS[new Date().getMonth()];
 
   return (
     <Card background={t.candy.mint}>
@@ -25,18 +22,22 @@ export function BillRadarCard({ bills }: { bills: IncomingBill[] }) {
       <View style={{ marginTop: t.spacing.sm, gap: t.spacing.sm }}>
         {bills.map((b) => (
           <View
-            key={b.key}
+            key={b.id}
             style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: t.spacing.sm }}
           >
             <AppText variant="heading" color={t.candyText} style={{ fontSize: 13, flexShrink: 1 }} numberOfLines={1}>
-              {b.merchant}{' '}
-              <AppText variant="body" color={t.candyText} style={{ fontSize: 11, opacity: 0.7 }}>
-                ~{b.predictedDay} {monthShort}
+              {b.name}{' '}
+              <AppText
+                variant="body"
+                color={b.overdue ? t.semantic.red : t.candyText}
+                style={{ fontSize: 11, opacity: b.overdue ? 1 : 0.7 }}
+              >
+                {b.overdue ? 'overdue since ' : ''}
+                {formatShortDate(b.dueDate)}
               </AppText>
             </AppText>
-            <AppText variant="money" color={t.candyText} style={{ fontSize: 13 }}>
-              {b.amountVaries ? '~' : ''}
-              {formatINR(b.predictedAmount)}
+            <AppText variant="money" color={b.overdue ? t.semantic.red : t.candyText} style={{ fontSize: 13 }}>
+              {formatINR(b.amount)}
             </AppText>
           </View>
         ))}
