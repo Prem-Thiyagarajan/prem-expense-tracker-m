@@ -34,6 +34,19 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler;
 }
 
+/**
+ * Fire the same 401 handling the interceptor below performs, for callers that
+ * cannot go through axios. The assistant's chat stream uses `expo/fetch`
+ * (axios can't read a response body incrementally in React Native), so it sits
+ * outside the interceptor chain and has to report an expired session itself —
+ * otherwise a signed-out user would sit on a dead chat screen instead of being
+ * bounced to login like every other screen.
+ */
+export async function notifyUnauthorized() {
+  await clearToken();
+  onUnauthorized?.();
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
