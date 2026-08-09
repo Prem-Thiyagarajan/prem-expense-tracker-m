@@ -5,6 +5,7 @@ import { Pressable, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
 import type { CategoryBudget } from '@/api/budget';
+import { AssistantButton } from '@/components/assistant/AssistantButton';
 import { AlertBell } from '@/components/AlertBell';
 import { BillRadarCard } from '@/components/BillRadarCard';
 import { BudgetCategoryGridSheet } from '@/components/BudgetCategoryGridSheet';
@@ -85,6 +86,7 @@ export default function BudgetScreen() {
           <MonthSwitcher />
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+            <AssistantButton />
             <AlertBell />
             <Pressable onPress={() => router.push('/profile' as Href)} hitSlop={6}>
               <Surface

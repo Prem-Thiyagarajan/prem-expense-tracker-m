@@ -13,6 +13,7 @@ import type { Category } from '@/api/categories';
 import { invalidateTransactionDerived } from '@/api/queryClient';
 import { deleteTransaction, type Transaction, type TxnType } from '@/api/transactions';
 import { useAuth } from '@/auth/AuthProvider';
+import { AssistantButton } from '@/components/assistant/AssistantButton';
 import { AlertBell } from '@/components/AlertBell';
 import { useAddSheet } from '@/components/AddSheetHost';
 import { CategoryGridSheet } from '@/components/CategoryGridSheet';
@@ -255,6 +256,7 @@ export default function ExpensesScreen() {
           <MonthSwitcher />
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+            <AssistantButton />
             <AlertBell />
             <Pressable onPress={() => router.push('/profile' as Href)} hitSlop={6}>
               <Surface

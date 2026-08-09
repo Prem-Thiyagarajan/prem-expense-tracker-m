@@ -3,7 +3,7 @@
     "name": "ExpenseTracker",
     "slug": "expensetracker",
     "owner": "prem-thiyagarajans-team",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "pft",
@@ -37,7 +37,13 @@
         }
       ],
       "expo-secure-store",
-      "expo-updates"
+      "expo-updates",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow ExpenseTracker to use the microphone so you can ask the assistant by voice."
+        }
+      ]
     ],
     "updates": {
       "fallbackToCacheTimeout": 0,
