@@ -1,6 +1,6 @@
 import { useIsFocused } from '@react-navigation/native';
-import { useState } from 'react';
-import { useRouter, type Href } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
@@ -35,6 +35,18 @@ export default function BudgetScreen() {
   const billRadar = useBillRadar();
   const [editing, setEditing] = useState(false);
   const [viewingAll, setViewingAll] = useState(false);
+
+  // The assistant can send the user here with `?open=budget-edit`, so "help me
+  // set up a budget" lands inside the editor instead of merely next to it.
+  // Guarded by a ref because the param survives in the URL — without it, every
+  // re-render (and a back-navigation onto this tab) would reopen the sheet.
+  const params = useLocalSearchParams<{ open?: string }>();
+  const handledOpenRef = useRef(false);
+  useEffect(() => {
+    if (handledOpenRef.current || params.open !== 'budget-edit') return;
+    handledOpenRef.current = true;
+    setEditing(true);
+  }, [params.open]);
 
   const initial = user?.username?.[0]?.toUpperCase() ?? '?';
   const budgeted = (data?.plan ?? []).filter((b) => b.budget > 0);

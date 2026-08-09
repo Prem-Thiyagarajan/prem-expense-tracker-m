@@ -11,6 +11,7 @@ import {
 } from '@/api/auth';
 import { queryClient } from '@/api/queryClient';
 import { getToken } from '@/api/tokenStore';
+import { clearAllHistory } from '@/state/assistantStore';
 
 type Status = 'loading' | 'authed' | 'guest';
 
@@ -54,6 +55,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // accounts, transactions, dashboard and budgets — `['accounts']` in
     // particular has a 10-minute staleTime, so it isn't even refetched.
     queryClient.clear();
+    // Assistant transcripts live in AsyncStorage, outside the QueryClient, so
+    // clear() above does not reach them. They contain spending detail and are
+    // keyed per user, so leaving them behind would show the next person to sign
+    // in on this device the previous user's conversation.
+    await clearAllHistory();
     if (!mounted.current) return;
     setUser(null);
     setStatus('guest');

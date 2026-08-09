@@ -87,6 +87,19 @@ export default function ProfileScreen() {
           </View>
         </Card>
 
+        {/* Assistant */}
+        <Section t={t} title="Assistant">
+          <Card padded={false}>
+            <DrillRow
+              t={t}
+              emoji="✨"
+              label="Ask about your spending"
+              last
+              onPress={() => router.push('/assistant' as Href)}
+            />
+          </Card>
+        </Section>
+
         {/* Appearance */}
         <Section t={t} title="Appearance">
           <AppearanceControl t={t} />

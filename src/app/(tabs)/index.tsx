@@ -38,20 +38,31 @@ export default function HomeScreen() {
       <View style={{ gap: t.spacing.lg }}>
         {/* Header: logo tile · month control · avatar → profile */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Surface
-            backgroundColor={t.candy.yellow}
-            offset={t.shadowOffset.chip}
-            radius={t.radius.chip}
-            style={{
-              width: 40,
-              height: 40,
-              alignItems: 'center',
-              justifyContent: 'center',
-              transform: [{ rotate: '-6deg' }],
-            }}
+          {/* The assistant's primary entry point. This slot held a decorative
+              logo tile; the header's other three items already leave only ~14px
+              of slack on a 360px screen, so a fifth element would squeeze the
+              month switcher. A functional button earns the space better than an
+              ornament, and the launcher icon still carries the branding. */}
+          <Pressable
+            onPress={() => router.push(`/assistant?month=${month}` as Href)}
+            hitSlop={6}
+            accessibilityLabel="Ask the assistant"
           >
-            <AppText style={{ fontSize: 20 }}>💸</AppText>
-          </Surface>
+            <Surface
+              backgroundColor={t.candy.lilac}
+              offset={t.shadowOffset.chip}
+              radius={t.radius.chip}
+              style={{
+                width: 40,
+                height: 40,
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: [{ rotate: '-6deg' }],
+              }}
+            >
+              <AppText style={{ fontSize: 18 }}>✨</AppText>
+            </Surface>
+          </Pressable>
 
           <MonthSwitcher />
 
