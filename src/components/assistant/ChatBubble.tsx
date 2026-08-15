@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 
-import { flattenMarkdown } from '@/lib/assistantText';
+import { RichText } from './RichText';
 import { useTheme } from '@/theme';
 import { AppText } from '../ui/AppText';
 import { Surface } from '../ui/Surface';
@@ -24,7 +24,7 @@ export function ChatBubble({ message, streamingText, onRetry }: Props) {
   const t = useTheme();
   const isUser = message.role === 'user';
   const isStreaming = streamingText !== undefined;
-  const body = isStreaming ? streamingText : flattenMarkdown(message.text);
+  const body = isStreaming ? streamingText : message.text;
 
   // A failed turn with no text at all renders as a dedicated error bubble.
   if (!isUser && message.error && !message.text) {
@@ -74,15 +74,20 @@ export function ChatBubble({ message, streamingText, onRetry }: Props) {
         radius={t.radius.card}
         style={{ paddingHorizontal: t.spacing.lg, paddingVertical: t.spacing.md }}
       >
-        <AppText variant="body" color={isUser ? t.candyText : t.colors.ink}>
-          {body}
-          {isStreaming ? (
-            // Block cursor so an in-progress reply never looks like a finished one.
+        {isStreaming ? (
+          // While streaming, render plain text: the markup is still arriving, so
+          // parsing a half-written `**bold` would make emphasis flicker on and
+          // off as tokens land. It formats once the reply is complete.
+          <AppText variant="body" color={isUser ? t.candyText : t.colors.ink}>
+            {body}
+            {/* Block cursor so an in-progress reply never looks finished. */}
             <AppText variant="body" tone="muted">
               {' ▌'}
             </AppText>
-          ) : null}
-        </AppText>
+          </AppText>
+        ) : (
+          <RichText text={body} color={isUser ? t.candyText : t.colors.ink} />
+        )}
       </Surface>
 
       {message.action ? <NavigateCard action={message.action} /> : null}
