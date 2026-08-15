@@ -45,6 +45,7 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
+    "icons": "node ./scripts/generate-icons.mjs",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",

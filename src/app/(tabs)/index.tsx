@@ -7,7 +7,7 @@ import { AssistantButton } from '@/components/assistant/AssistantButton';
 import { AlertBell } from '@/components/AlertBell';
 import { CategoryDonut, SpendTrend } from '@/components/charts';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
-import { AppText, Button, Card, Screen } from '@/components/ui';
+import { AppMark, AppText, Button, Card, Screen } from '@/components/ui';
 import { Surface } from '@/components/ui/Surface';
 import { useDashboard } from '@/hooks/useDashboard';
 import type { RecentTransaction } from '@/api/dashboard';
@@ -40,7 +40,7 @@ export default function HomeScreen() {
         {/* Header: logo tile · month control · avatar → profile */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Surface
-            backgroundColor={t.candy.yellow}
+            backgroundColor={t.brand.field}
             offset={t.shadowOffset.chip}
             radius={t.radius.chip}
             style={{
@@ -51,7 +51,7 @@ export default function HomeScreen() {
               transform: [{ rotate: '-6deg' }],
             }}
           >
-            <AppText style={{ fontSize: 20 }}>💸</AppText>
+            <AppMark size={30} variant="lime" />
           </Surface>
 
           <MonthSwitcher />

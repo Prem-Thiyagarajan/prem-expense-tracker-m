@@ -60,6 +60,18 @@ export type CandyColor = keyof typeof candy;
 // Ink text always sits on candy backgrounds regardless of theme.
 export const candyText = '#1E1B16';
 
+// ── Brand / app mark (logo/README.md §Colours) ───────────────────────────────
+// Lime on deep olive-black. Deliberately NOT theme-aware and NOT part of the
+// candy palette: the icon README scopes lime to the app mark and marketing only,
+// so the in-app cream + candy theme is unchanged by it.
+export const brand = {
+  lime: '#D8FF3E',
+  fieldTop: '#20240A', // gradient field, top-left
+  fieldBottom: '#0A0B03', // gradient field, bottom-right
+  field: '#151806', // flat equivalent, for small tiles and monochrome pipelines
+  mono: '#FFFFFF', // notification / tinted-icon variant
+} as const;
+
 // ── Semantic colors (theme-aware) ────────────────────────────────────────────
 export type Semantic = { green: string; red: string; warn: string };
 export const semantic: { light: Semantic; dark: Semantic } = {

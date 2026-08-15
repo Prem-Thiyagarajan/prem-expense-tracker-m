@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
 import { ForgotPasswordSheet } from '@/components/ForgotPasswordSheet';
-import { AppText, Button, Screen, TextField, useToast } from '@/components/ui';
+import { AppMark, AppText, Button, Screen, TextField, useToast } from '@/components/ui';
 import { Surface } from '@/components/ui/Surface';
 import { apiErrorMessage } from '@/lib/apiError';
 import { useTheme } from '@/theme';
@@ -40,8 +40,10 @@ export default function LoginScreen() {
   return (
     <Screen tabBarInset={false}>
       <View style={{ gap: t.spacing.lg, paddingTop: t.spacing.xl }}>
+        {/* The app mark on its dark field — the one place the lime brand colour
+            appears in-app, matching the launcher icon and splash. */}
         <Surface
-          backgroundColor={t.candy.yellow}
+          backgroundColor={t.brand.field}
           offset={t.shadowOffset.chip}
           radius={t.radius.chip}
           style={{
@@ -52,7 +54,7 @@ export default function LoginScreen() {
             transform: [{ rotate: '-6deg' }],
           }}
         >
-          <AppText style={{ fontSize: 28 }}>💸</AppText>
+          <AppMark size={40} variant="lime" />
         </Surface>
 
         <View style={{ gap: 4 }}>

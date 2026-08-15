@@ -4,6 +4,7 @@ import { useColorScheme } from 'react-native';
 
 import {
   border,
+  brand,
   candy,
   candyText,
   categoryFallback,
@@ -31,6 +32,8 @@ export type Theme = {
   colors: Palette;
   candy: typeof candy;
   candyText: string;
+  /** App-mark palette. Identical in both modes — see tokens.ts §Brand. */
+  brand: typeof brand;
   semantic: Semantic;
   categoryStyle: typeof categoryStyle;
   categoryFallback: typeof categoryFallback;
@@ -48,6 +51,7 @@ function buildTheme(mode: ColorMode): Theme {
     colors: mode === 'dark' ? darkColors : lightColors,
     candy,
     candyText,
+    brand,
     semantic: mode === 'dark' ? semantic.dark : semantic.light,
     categoryStyle,
     categoryFallback,

@@ -1,6 +1,7 @@
 export { AppText } from './AppText';
 export type { TextVariant } from './AppText';
 export { Surface, PressableSurface } from './Surface';
+export { AppMark } from './AppMark';
 export { Card } from './Card';
 export { Button } from './Button';
 export { Chip } from './Chip';

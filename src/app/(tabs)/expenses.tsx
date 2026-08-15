@@ -235,9 +235,9 @@ export default function ExpensesScreen() {
       {/* Fixed header: title · month · count · search · filter chips. */}
       <View style={{ paddingHorizontal: t.spacing.lg, gap: t.spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Every tab leads with its own tilted sticker tile — 💸 Home,
-              🧾 Expenses, 🎯 Budget, 📊 Trends — and no page-name label, to
-              stay uniform with the other three tabs' headers. */}
+          {/* Every tab leads with its own tilted sticker tile — the app mark on
+              Home, then 🧾 Expenses, 🎯 Budget, 📊 Trends — and no page-name
+              label, to stay uniform with the other three tabs' headers. */}
           <Surface
             backgroundColor={t.candy.mint}
             offset={t.shadowOffset.chip}
