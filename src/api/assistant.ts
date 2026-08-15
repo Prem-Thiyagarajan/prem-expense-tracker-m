@@ -1,22 +1,25 @@
+import { isAxiosError } from 'axios';
 import { fetch } from 'expo/fetch';
 
 import { env } from '@/lib/env';
-import { notifyUnauthorized } from './client';
+import { api, notifyUnauthorized } from './client';
 import { getToken } from './tokenStore';
 
 /**
- * Assistant transport.
+ * Assistant transport — deliberately split across two HTTP clients.
  *
- * ── Why this file does not use the shared axios client ──────────────────────
- * Axios cannot read a response body incrementally in React Native — it buffers
- * the whole thing — so a streamed reply would only appear once the model had
- * finished, defeating the point. `expo/fetch` exposes a real ReadableStream, so
- * chat goes through that instead.
+ * CHAT uses `expo/fetch`, because axios cannot read a response body
+ * incrementally in React Native and a streamed reply would only appear once the
+ * model had finished. The cost is that no axios interceptor applies, so the
+ * Authorization header and 401 handling are done by hand in `streamChat`.
  *
- * The cost is that NONE of the axios interceptors apply here: no automatic
- * Authorization header and no 401 handling. Both are done by hand below. Forget
- * either and you get the failure mode documented in lib/env.ts — a dead session
- * that silently never recovers.
+ * EVERYTHING ELSE uses the shared axios client. In particular TRANSCRIBE must
+ * not use `expo/fetch`: it uploads a recording as a React Native FormData part
+ * of the form `{ uri, name, type }`, and expo/fetch cannot serialize that —
+ * expo's own `convertFormData.d.ts` states "`uri` is not supported for React
+ * Native's FormData". It threw before any HTTP status existed, which surfaced
+ * to the user as a bogus "check your connection". Axios goes through XHR, which
+ * handles file URIs natively, and brings auth + 401 handling with it.
  */
 
 /** One event off the SSE stream. Mirrors the backend's assistant_router. */
@@ -137,39 +140,50 @@ export async function* streamChat(
   }
 }
 
-/** POST an audio clip for transcription. Distinguishes "busy" from "down". */
+/**
+ * POST an audio clip for transcription. Distinguishes "busy" from "down".
+ *
+ * Goes through axios (XHR) rather than expo/fetch: only XHR understands React
+ * Native's `{ uri, name, type }` FormData part. See the note at the top.
+ */
 export async function transcribeAudio(uri: string): Promise<string> {
   const form = new FormData();
-  // RN's FormData takes this {uri, name, type} shape for file parts.
   form.append('file', {
     uri,
     name: 'recording.m4a',
     type: 'audio/m4a',
   } as unknown as Blob);
 
-  const response = await fetch(`${env.apiBaseUrl}/assistant/transcribe`, {
-    method: 'POST',
-    headers: await authHeaders(), // no Content-Type — the boundary must be auto-set
-    body: form,
-  });
-
-  await guardAuth(response.status);
-
-  if (!response.ok) {
+  try {
+    const { data } = await api.post<{ text?: string }>('/assistant/transcribe', form, {
+      // Let axios/XHR generate the multipart boundary; setting the header
+      // without one produces a body the server cannot parse.
+      headers: { 'Content-Type': 'multipart/form-data' },
+      // Whisper on a 60s clip plus upload over mobile data needs longer than
+      // the client's default.
+      timeout: 90_000,
+    });
+    return (data.text ?? '').trim();
+  } catch (e) {
+    // 401 is already handled by the axios interceptor; everything else is
+    // mapped to the backend's error taxonomy so the UI can tell "busy" (retry
+    // in a moment, mic stays enabled) from "unavailable" (mic disables).
     let code = 'voice_unavailable';
     let message = 'Voice input is temporarily unavailable — you can still type.';
-    try {
-      const detail = (await response.json())?.detail;
+    let status: number | undefined;
+
+    if (isAxiosError(e)) {
+      status = e.response?.status;
+      const detail = (e.response?.data as { detail?: { code?: string; message?: string } })?.detail;
       if (detail?.code) code = detail.code;
       if (detail?.message) message = detail.message;
-    } catch {
-      // Keep the defaults if the body isn't the JSON we expect.
+      else if (!e.response) {
+        code = 'network';
+        message = 'Could not reach the server. Check your connection.';
+      }
     }
-    throw new AssistantRequestError(message, code, response.status);
+    throw new AssistantRequestError(message, code, status);
   }
-
-  const data = (await response.json()) as { text?: string };
-  return (data.text ?? '').trim();
 }
 
 /**
@@ -177,15 +191,11 @@ export async function transcribeAudio(uri: string): Promise<string> {
  * outage can disable just the microphone while text chat keeps working.
  */
 export async function getAssistantHealth(): Promise<AssistantHealth> {
-  const response = await fetch(`${env.apiBaseUrl}/assistant/health`, {
-    headers: await authHeaders(),
-  });
-
-  await guardAuth(response.status);
-
-  if (!response.ok) {
+  try {
+    const { data } = await api.get<AssistantHealth>('/assistant/health');
+    return data;
+  } catch {
     // Treat an unreachable probe as "chat may work, voice definitely unproven".
     return { chat: true, voice: false, voice_reason: 'probe_failed' };
   }
-  return (await response.json()) as AssistantHealth;
 }
