@@ -43,8 +43,6 @@ yarn-error.*
 /android
 
 # ── Project-specific: NEVER commit (only app code goes to the repo) ──
-# Design handoff from Claude Design
-Claude Design PFT Mobile App/
 # Brand/logo source masters — the app ships the generated assets/images/* instead
 logo/
 logo.png
@@ -55,4 +53,3 @@ AGENTS.md
 PROGRESS.md
 .mcp.json
 #----------------------------------------------------End of recently edited files---------------------------------------------#
-Mobile app design direction and themes (2)/
